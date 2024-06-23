@@ -19,14 +19,6 @@ data TeamInfo = TeamInfo
   } deriving stock (Show, Generic)
     deriving anyclass (FromJSON, ToJSON)
 
-newtype Token = Token Text
-  deriving stock (Eq, Ord, Read, Generic)
-
-instance ToHttpApiData Token where
-  toUrlPiece (Token tk) = "Bearer " <> tk
-
-type TokenAuth = Header' '[Required] "Authorization" Token
-
 data API mode = API
   { getTeamInfo :: mode
     :- "team"
@@ -43,11 +35,19 @@ clientToIO link m = runClientM m env >>= either throwIO pure
       url <- parseBaseUrl link
       pure $ mkClientEnv mgr url
 
+newtype Token = Token Text
+  deriving stock (Eq, Ord, Read, Generic)
+
+token :: Token
+token = Token $ T.strip $(embedStringFile "token")
+
+instance ToHttpApiData Token where
+  toUrlPiece (Token tk) = "Bearer " <> tk
+
+type TokenAuth = Header' '[Required] "Authorization" Token
+
 api :: API (AsClientT IO)
 api = fromServant $ hoistClient
   (Proxy @(ToServantApi API))
   (clientToIO "https://boundvariable.space/")
   $ client (Proxy @(TokenAuth :> ToServantApi API)) token
-
-token :: Token
-token = Token $ T.strip $(embedStringFile "token")
