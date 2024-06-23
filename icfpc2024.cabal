@@ -1,0 +1,82 @@
+cabal-version: 3.0
+name: icfpc2024
+version: 0.0.0.0
+extra-source-files: token
+
+common common
+    default-language: GHC2021
+    default-extensions:
+        AllowAmbiguousTypes
+        ApplicativeDo
+        Arrows
+        BlockArguments
+        DefaultSignatures
+        DeriveAnyClass
+        DerivingVia
+        DuplicateRecordFields
+        FunctionalDependencies
+        GADTs
+        ImplicitParams
+        ImpredicativeTypes
+        IncoherentInstances
+        LambdaCase
+        LexicalNegation
+        LiberalTypeSynonyms
+        LinearTypes
+        MagicHash
+        MonadComprehensions
+        MultiWayIf
+        NegativeLiterals
+        NondecreasingIndentation
+        NPlusKPatterns
+        NumDecimals
+        OverloadedLabels
+        OverloadedRecordDot
+        OverloadedStrings
+        PackageImports
+        ParallelListComp
+        PartialTypeSignatures
+        PatternSynonyms
+        QualifiedDo
+        QuantifiedConstraints
+        QuasiQuotes
+        RecordWildCards
+        RecursiveDo
+        RoleAnnotations
+        TemplateHaskell
+        TransformListComp
+        TypeFamilyDependencies
+        UnboxedSums
+        UnboxedTuples
+        UndecidableInstances
+        UndecidableSuperClasses
+        UnicodeSyntax
+        UnliftedDatatypes
+        UnliftedFFITypes
+        UnliftedNewtypes
+        ViewPatterns
+
+common executables
+    import: common
+    hs-source-dirs: app
+    build-depends:
+          base
+        , icfpc2024
+
+executable api
+    import: executables
+    main-is: API.hs
+
+library
+    import: common
+    build-depends:
+          base
+        , aeson
+        , file-embed
+        , http-client-tls
+        , servant
+        , servant-client
+        , text
+    hs-source-dirs: lib
+    exposed-modules:
+        , ICFPC.API
