@@ -19,10 +19,19 @@ data TeamInfo = TeamInfo
   } deriving stock (Show, Generic)
     deriving anyclass (FromJSON, ToJSON)
 
+data Scoreboard = Scoreboard
+  { columns :: [Text]
+  , rows :: [[Value]]
+  } deriving stock (Show, Generic)
+    deriving anyclass (FromJSON, ToJSON)
+
 data API mode = API
   { getTeamInfo :: mode
     :- "team"
     :> Get '[JSON] TeamInfo
+  , getScoreboard :: mode
+    :- "scoreboard"
+    :> Get '[JSON] Scoreboard
   }
   deriving stock (Generic)
 

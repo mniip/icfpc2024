@@ -66,6 +66,8 @@ common executables
 executable api
     import: executables
     main-is: API.hs
+    build-depends:
+          optparse-applicative
 
 library
     import: common
