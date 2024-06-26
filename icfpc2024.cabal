@@ -74,11 +74,16 @@ library
     build-depends:
           base
         , aeson
+        , bytestring
+        , safe-exceptions
         , file-embed
+        , hasql
         , http-client-tls
+        , rel8
         , servant
         , servant-client
         , text
     hs-source-dirs: lib
     exposed-modules:
         , ICFPC.API
+        , ICFPC.DB

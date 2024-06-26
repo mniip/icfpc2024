@@ -1,6 +1,6 @@
 module ICFPC.API where
 
-import Control.Exception
+import Control.Exception.Safe
 import Data.Aeson
 import Data.FileEmbed
 import Data.Proxy
