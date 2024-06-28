@@ -84,6 +84,13 @@ executable lambdaman-greedy
     build-depends:
           bytestring
 
+executable lambdaman-vis
+    import: executables
+    main-is: LambdaManVis.hs
+    build-depends:
+          array
+        , bytestring
+
 executable spaceship
     import: executables
     main-is: Spaceship.hs
