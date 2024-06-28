@@ -7,7 +7,7 @@ import Language.Haskell.TH.Syntax
 
 lambdaman1 :: Expr
 lambdaman1 = $(lift . fromHaskell =<< [|
-    "solve lambdaman1 LLLDURRRUDRRURR"
+    "solve lambdaman1 UDLLLDURRRRRURR"
   |])
 
 lambdaman2 :: Expr
@@ -17,7 +17,7 @@ lambdaman2 = $(lift . fromHaskell =<< [|
 
 lambdaman3 :: Expr
 lambdaman3 = $(lift . fromHaskell =<< [|
-    "solve lambdaman3 DRDRLLLUDLLUURURLLURLUURRRRRDLLLRDRRDLRD"
+    "solve lambdaman3 DRDRLLLUDLLUURURLLURLUURRRRRDDDDULUULDUL"
   |])
 
 lambdaman4 :: Expr

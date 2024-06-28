@@ -6,6 +6,7 @@ import Data.ByteString (ByteString)
 import Data.ByteString.Builder qualified as B
 import Data.ByteString.Char8 qualified as BS8
 import Data.ByteString.Lazy qualified as BSL
+import Data.Hashable
 import Data.Foldable
 import Data.IntMap (IntMap)
 import Data.IntMap qualified as IM
@@ -14,6 +15,7 @@ import Data.IntSet qualified as IS
 import Data.Primitive.Array
 import Data.Primitive.PrimArray
 import Data.Word
+import GHC.Generics
 
 
 data Input = Input
@@ -71,7 +73,8 @@ data LambdaManState = LambdaManState
   { posX :: !Int
   , posY :: !Int
   , pills :: !(IntMap IntSet)
-  } deriving stock (Eq, Ord, Show)
+  } deriving stock (Eq, Ord, Show, Generic)
+    deriving anyclass (Hashable)
 
 initialState :: Input -> LambdaManState
 initialState !input = LambdaManState
@@ -110,6 +113,7 @@ simulateStep !input !st !d
       (mfilter (not . IS.null) . Just . IS.delete x) y st.pills
     }
   | otherwise = st
+{-# INLINE simulateStep #-}
 
 checkSolution :: Input -> [Direction] -> LambdaManState
 checkSolution input = foldl' (simulateStep input) (initialState input)

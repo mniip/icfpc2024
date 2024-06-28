@@ -84,6 +84,12 @@ executable lambdaman-greedy
     build-depends:
           bytestring
 
+executable lambdaman-breadth
+    import: executables
+    main-is: LambdaManBreadth.hs
+    build-depends:
+          bytestring
+
 executable lambdaman-vis
     import: executables
     main-is: LambdaManVis.hs
@@ -106,10 +112,12 @@ library
         , containers
         , safe-exceptions
         , file-embed
+        , hashable
         , hasql
         , hasql-th
         , http-client-tls
         , http-media
+        , mtl
         , primitive
         , profunctors
         , pqueue
@@ -119,6 +127,7 @@ library
         , text
         , time
         , uuid
+        , unordered-containers
     hs-source-dirs: lib
     exposed-modules:
         , ICFPC.API
@@ -129,4 +138,6 @@ library
         , ICFPC.Language.Eval
         , ICFPC.Language.TH
         , ICFPC.LambdaMan
+        , ICFPC.LambdaMan.BreadthFirst
+        , ICFPC.LambdaMan.Graph
         , ICFPC.LambdaMan.Greedy
