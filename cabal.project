@@ -1,2 +1,4 @@
 packages: *.cabal
 with-compiler: ghc-9.6.5
+constraints:
+  hasql < 1.7
