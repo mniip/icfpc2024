@@ -77,6 +77,10 @@ executable lambdaman
     build-depends:
 	      array
 
+executable spaceship
+    import: executables
+    main-is: Spaceship.hs
+
 library
     import: common
     build-depends:
