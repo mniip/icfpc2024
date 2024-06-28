@@ -13,6 +13,13 @@ import Data.List
 import Data.Text (Text)
 import Data.Text.Encoding qualified as T
 import Numeric.Natural
+import Data.Word
+
+
+newtype ICFPText = ICFPText (PrimArray Word8)
+
+
+
 
 
 data UnaryOp
@@ -164,8 +171,8 @@ formatToken = \case
   TTrue -> B.char8 'T'
   TInt x -> B.char8 'I' <> formatInteger x
   TString x -> B.char8 'S' <> formatString x
-  TUnary x -> formatUnaryOp x
-  TBinary x -> formatBinaryOp x
+  TUnary x -> B.char8 'U' <> formatUnaryOp x
+  TBinary x -> B.char8 'B' <> formatBinaryOp x
   TTernary -> B.char8 '?'
   TLambda i -> B.char8 'L' <> formatInteger i
   TVar i -> B.char8 'v' <> formatInteger i
@@ -180,7 +187,7 @@ encodeTokenStream (x0:xs0) = BSL.toStrict $ B.toLazyByteString
   $ formatToken x0 <> go xs0
   where
     go [] = mempty
-    go (x:xs) = formatToken x <> B.char8 ' ' <> go xs
+    go (x:xs) = B.char8 ' ' <> formatToken x <> go xs
 
 data Expr
   = EFalse
@@ -214,10 +221,11 @@ formatExpr = \case
   ETrue -> formatToken TTrue
   EInt x -> formatToken $ TInt x
   EString x -> formatToken $ TString x
-  Unary op x -> formatUnaryOp op <> B.char8 ' ' <> formatExpr x
-  Binary op x y -> formatBinaryOp op <> B.char8 ' ' <> formatExpr x
+  Unary op x -> formatToken (TUnary op) <> B.char8 ' ' <> formatExpr x
+  Binary op x y -> formatToken (TBinary op) <> B.char8 ' ' <> formatExpr x
     <> B.char8 ' ' <> formatExpr y
-  Ternary x y z -> formatExpr x <> B.char8 ' ' <> formatExpr y
+  Ternary x y z -> B.char8 '?' <> B.char8 ' ' <> formatExpr x
+    <> B.char8 ' ' <> formatExpr y
     <> B.char8 ' ' <> formatExpr z
   Lambda i x -> formatToken (TLambda i) <> B.char8 ' ' <> formatExpr x
   Var i -> formatToken (TVar i)
