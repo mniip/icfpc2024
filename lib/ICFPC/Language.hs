@@ -3,6 +3,7 @@ module ICFPC.Language where
 import Control.Applicative
 import Data.Attoparsec.ByteString.Char8 qualified as Attoparsec
 import Data.ByteString (ByteString)
+import Data.ByteString qualified as BS
 import Data.ByteString.Builder (Builder)
 import Data.ByteString.Builder qualified as B
 import Data.ByteString.Char8 qualified as BS8
@@ -10,17 +11,42 @@ import Data.ByteString.Lazy qualified as BSL
 import Data.Primitive.PrimArray
 import Data.Functor
 import Data.List
-import Data.Text (Text)
-import Data.Text.Encoding qualified as T
-import Numeric.Natural
+import Data.String
 import Data.Word
+import Numeric.Natural
 
 
-newtype ICFPText = ICFPText (PrimArray Word8)
+newtype ICFPText = ICFPText ByteString
+  deriving stock (Eq, Ord)
 
+encoding :: PrimArray Char
+encoding = primArrayFromList
+  "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!\"#$%&'()*+,-\
+  \./:;<=>?@[\\]^_`|~ \n"
 
+instance Show ICFPText where
+  showsPrec d (ICFPText pa)
+    | '\n' `elem` decoded = showString "\"\\\n\\"
+      . showString formatted
+      . showString "\\\n\\\""
+    | otherwise = showsPrec d  decoded
+    where
+      decoded = map (indexPrimArray encoding . fromEnum) $ BS.unpack pa
+      formatted = decoded >>= \case
+        '\n' -> "\\n\\\n\\"
+        '"' -> "\""
+        '\'' -> "'"
+        c -> let w = show c in drop 1 $ zipWith const w $ drop 1 w
 
+decoding :: PrimArray Word8
+decoding = primArrayFromList
+  [ case findIndex (== c) $ primArrayToList encoding of
+    Just i -> toEnum i
+    Nothing -> 0xFF
+  | c <- take 128 [minBound..] ]
 
+instance IsString ICFPText where
+  fromString = ICFPText . BS.map (indexPrimArray decoding . fromEnum) . BS8.pack
 
 data UnaryOp
   = Neg
@@ -50,7 +76,7 @@ data Token
   = TFalse
   | TTrue
   | TInt Natural
-  | TString Text
+  | TString ICFPText
   | TUnary UnaryOp
   | TBinary BinaryOp
   | TTernary
@@ -80,27 +106,15 @@ formatInteger = \case
     go n b = case divMod n 94 of
       (d, m) -> go d (B.char8 (unCharValue $ fromIntegral m) <> b)
 
-encoding :: PrimArray Char
-encoding = primArrayFromList
-  "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!\"#$%&'()*+,-\
-  \./:;<=>?@[\\]^_`|~ \n"
-
-parseString :: Attoparsec.Parser Text
+parseString :: Attoparsec.Parser ICFPText
 parseString = Attoparsec.takeWhile validChar
-  <&> BS8.map (indexPrimArray encoding . charValue)
-  <&> T.decodeASCII
+  <&> BS.map (subtract $ fromIntegral $ fromEnum '!')
+  <&> ICFPText
 
-decoding :: PrimArray Char
-decoding = primArrayFromList
-  [ case findIndex (== c) $ primArrayToList encoding of
-    Just i -> unCharValue i
-    Nothing -> '\NUL'
-  | c <- take 128 [minBound..] ]
 
-formatString :: Text -> Builder
-formatString = B.byteString
-  . BS8.map (indexPrimArray decoding . fromEnum)
-  . T.encodeUtf8
+formatString :: ICFPText -> Builder
+formatString (ICFPText bs) = B.byteString
+  $ BS.map (+ fromIntegral (fromEnum '!')) bs
 
 parseUnaryOp :: Attoparsec.Parser UnaryOp
 parseUnaryOp = Attoparsec.anyChar >>= \case
@@ -193,7 +207,7 @@ data Expr
   = EFalse
   | ETrue
   | EInt Natural
-  | EString Text
+  | EString ICFPText
   | Unary UnaryOp Expr
   | Binary BinaryOp Expr Expr
   | Ternary Expr Expr Expr
