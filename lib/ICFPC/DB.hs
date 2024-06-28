@@ -1,24 +1,21 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 module ICFPC.DB where
 
-import Control.Arrow
 import Control.Exception.Safe
 import Control.Monad
 import Data.ByteString (ByteString)
 import Data.ByteString.Char8 qualified as BS8
 import Data.FileEmbed
-import Data.Functor.Contravariant
-import Data.Functor.Contravariant.Divisible
+import Data.Foldable
 import Data.Int
+import Data.Profunctor
 import Data.Text (Text)
 import Data.Time
 import Data.UUID
 import GHC.Generics
 import Hasql.Connection
-import Hasql.Decoders qualified as Dec
-import Hasql.Encoders qualified as Enc
 import Hasql.Session qualified as Session
-import Hasql.Statement
+import Hasql.TH
 import System.IO.Unsafe
 
 
@@ -34,27 +31,23 @@ data Problem = Problem
   , statement :: Text
   } deriving stock (Eq, Ord, Show, Generic)
 
-problemRow :: Dec.Row Problem
-problemRow = do
-  problemID <- Dec.column do Dec.nonNullable $ ProblemID <$> Dec.int4
-  statement <- Dec.column do Dec.nonNullable Dec.text
-  pure Problem{..}
-
 selectProblem :: ProblemID -> Connection -> IO Problem
 selectProblem i = either throwIO pure <=< Session.run do
-  Session.statement i $ Statement
-    "SELECT id, statement FROM problems WHERE id = $1"
-    do Enc.param $ Enc.nonNullable $ unProblemID >$< Enc.int4
-    do Dec.singleRow problemRow
-    True
+  Session.statement i $ dimap
+    unProblemID
+    (\(ProblemID -> problemID, statement) -> Problem{..})
+    [singletonStatement|
+      SELECT id :: INT4, statement :: TEXT FROM problems WHERE id = $1 :: INT4
+    |]
 
 selectProblems :: Connection -> IO [Problem]
 selectProblems = either throwIO pure <=< Session.run do
-  Session.statement () $ Statement
-    "SELECT id, statement FROM problems"
-    do Enc.noParams
-    do Dec.rowList problemRow
-    True
+  Session.statement () $ dimap
+    id
+    (toList . fmap \(ProblemID -> problemID, statement) -> Problem{..})
+    [vectorStatement|
+      SELECT id :: INT4, statement :: TEXT FROM problems
+    |]
 
 data ProblemInsert = ProblemInsert
   { statement :: Text
@@ -62,11 +55,12 @@ data ProblemInsert = ProblemInsert
 
 insertProblem :: ProblemInsert -> Connection -> IO ProblemID
 insertProblem p = either throwIO pure <=< Session.run do
-  Session.statement p $ Statement
-    "INSERT INTO problems (statement) VALUES ($1) RETURNING id"
-    do Enc.param $ Enc.nonNullable $ (.statement) >$< Enc.text
-    do Dec.singleRow $ Dec.column $ Dec.nonNullable $ ProblemID <$> Dec.int4
-    True
+  Session.statement p $ dimap
+    (\ProblemInsert{..} -> statement)
+    ProblemID
+    [singletonStatement|
+      INSERT INTO problems (statement) VALUES ($1 :: TEXT) RETURNING id :: INT4
+    |]
 
 data ProblemUpdate = ProblemUpdate
   { problemID :: ProblemID
@@ -75,14 +69,12 @@ data ProblemUpdate = ProblemUpdate
 
 updateProblem :: ProblemUpdate -> Connection -> IO Bool
 updateProblem p = either throwIO pure <=< Session.run do
-  Session.statement p $ Statement
-    "UPDATE problems SET statement = $2 WHERE id = $1"
-    do
-      divide ((.problemID) &&& (.statement))
-        do Enc.param $ Enc.nonNullable $ unProblemID >$< Enc.int4
-        do Enc.param $ Enc.nonNullable Enc.text
-    do (/= 0) <$> Dec.rowsAffected
-    True
+  Session.statement p $ dimap
+    (\ProblemUpdate{..} -> (unProblemID problemID, statement))
+    (/= 0)
+    [rowsAffectedStatement|
+      UPDATE problems SET statement = $2 :: TEXT where id = $1 :: INT4
+    |]
 
 newtype SolutionID = SolutionID UUID
   deriving stock (Eq, Ord, Show)
@@ -99,52 +91,61 @@ data Solution = Solution
   , createdAt :: UTCTime
   } deriving stock (Eq, Ord, Show, Generic)
 
-solutionRow :: Dec.Row Solution
-solutionRow = do
-  problemID <- Dec.column do Dec.nonNullable $ ProblemID <$> Dec.int4
-  solutionID <- Dec.column do Dec.nonNullable $ SolutionID <$> Dec.uuid
-  submission <- Dec.column do Dec.nonNullable Dec.text
-  score <- Dec.column do Dec.nonNullable Dec.int4
-  parent <- Dec.column do Dec.nullable $ SolutionID <$> Dec.uuid
-  createdAt <- Dec.column do Dec.nonNullable Dec.timestamptz
-  pure Solution{..}
-
 selectSolution :: SolutionID -> Connection -> IO Solution
 selectSolution u = either throwIO pure <=< Session.run do
-  Session.statement u $ Statement
-    "SELECT problem_id, id, submission, score, parent, created_at\
-    \ FROM solutions WHERE id = $1"
-    do Enc.param $ Enc.nonNullable $ unSolutionID >$< Enc.uuid
-    do Dec.singleRow solutionRow
-    True
+  Session.statement u $ dimap
+    unSolutionID
+    (\
+      ( ProblemID -> problemID, SolutionID -> solutionID, submission, score
+      , fmap SolutionID -> parent, createdAt ) -> Solution{..})
+    [singletonStatement|
+      SELECT
+        problem_id :: INT4, id :: UUID, submission :: TEXT, score :: INT4,
+        parent :: UUID?, created_at :: TIMESTAMPTZ
+      FROM solutions WHERE id = $1 :: UUID
+    |]
 
 selectSolutions :: ProblemID -> Connection -> IO [Solution]
-selectSolutions u = either throwIO pure <=< Session.run do
-  Session.statement u $ Statement
-    "SELECT problem_id, id, submission, score, parent, created_at\
-    \ FROM solutions WHERE problem_id = $1"
-    do Enc.param $ Enc.nonNullable $ unProblemID >$< Enc.int4
-    do Dec.rowList solutionRow
-    True
+selectSolutions i = either throwIO pure <=< Session.run do
+  Session.statement i $ dimap
+    unProblemID
+    (toList . fmap \
+      ( ProblemID -> problemID, SolutionID -> solutionID, submission, score
+      , fmap SolutionID -> parent, createdAt ) -> Solution{..})
+    [vectorStatement|
+      SELECT
+        problem_id :: INT4, id :: UUID, submission :: TEXT, score :: INT4,
+        parent :: UUID?, created_at :: TIMESTAMPTZ
+      FROM solutions WHERE problem_id = $1 :: INT4
+    |]
 
 selectBestSolutions :: Connection -> IO [Solution]
 selectBestSolutions = either throwIO pure <=< Session.run do
-  Session.statement () $ Statement
-    "SELECT DISTINCT ON (problem_id)\
-    \ problem_id, id, submission, score, parent, created_at\
-    \ FROM solutions ORDER BY problem_id, score DESC"
-    do Enc.noParams
-    do Dec.rowList solutionRow
-    True
+  Session.statement () $ dimap
+    id
+    (toList . fmap \
+      ( ProblemID -> problemID, SolutionID -> solutionID, submission, score
+      , fmap SolutionID -> parent, createdAt ) -> Solution{..})
+    [vectorStatement|
+      SELECT DISTINCT ON (problem_id)
+        problem_id :: INT4, id :: UUID, submission :: TEXT, score :: INT4,
+        parent :: UUID?, created_at :: TIMESTAMPTZ
+      FROM solutions ORDER BY problem_id, score DESC
+    |]
 
 selectAllSolutions :: Connection -> IO [Solution]
 selectAllSolutions = either throwIO pure <=< Session.run do
-  Session.statement () $ Statement
-    "SELECT problem_id, id, submission, score, parent, created_at\
-    \ FROM solutions"
-    do Enc.noParams
-    do Dec.rowList solutionRow
-    True
+  Session.statement () $ dimap
+    id
+    (toList . fmap \
+      ( ProblemID -> problemID, SolutionID -> solutionID, submission, score
+      , fmap SolutionID -> parent, createdAt ) -> Solution{..})
+    [vectorStatement|
+      SELECT
+        problem_id :: INT4, id :: UUID, submission :: TEXT, score :: INT4,
+        parent :: UUID?, created_at :: TIMESTAMPTZ
+      FROM solutions
+    |]
 
 data SolutionInsert = SolutionInsert
   { problemID :: ProblemID
@@ -154,20 +155,16 @@ data SolutionInsert = SolutionInsert
   } deriving stock (Eq, Ord, Show, Generic)
 
 insertSolution :: SolutionInsert -> Connection -> IO SolutionID
-insertSolution p = either throwIO pure <=< Session.run do
-  Session.statement p $ Statement
-    "INSERT INTO solutions (problem_id, submission, score, parent)\
-    \ VALUES ($1, $2, $3, $4) RETURNING id"
-    do
-      divide ((.problemID) &&& (.submission) &&& (.score) &&& (.parent))
-        do Enc.param $ Enc.nonNullable $ unProblemID >$< Enc.int4
-        $ divide id
-          do Enc.param $ Enc.nonNullable Enc.text
-          $ divide id
-            do Enc.param $ Enc.nonNullable Enc.int4
-            do Enc.param $ Enc.nullable $ unSolutionID >$< Enc.uuid
-    do Dec.singleRow $ Dec.column $ Dec.nonNullable $ SolutionID <$> Dec.uuid
-    True
+insertSolution s = either throwIO pure <=< Session.run do
+  Session.statement s $ dimap
+    (\SolutionInsert{..}
+      -> (unProblemID problemID, submission, score, fmap unSolutionID parent))
+    SolutionID
+    [singletonStatement|
+      INSERT INTO solutions (problem_id, submission, score, parent)
+      VALUES ($1 :: INT4, $2 :: TEXT, $3 :: INT4, $4 :: UUID?)
+      RETURNING id :: UUID
+    |]
 
 dbSettings :: ByteString
 dbSettings = BS8.strip $(embedStringFile "db_settings")

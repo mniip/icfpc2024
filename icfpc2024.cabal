@@ -79,7 +79,9 @@ library
         , safe-exceptions
         , file-embed
         , hasql
+        , hasql-th
         , http-client-tls
+        , profunctors
         , servant
         , servant-client
         , text
