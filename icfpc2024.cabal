@@ -106,5 +106,6 @@ library
         , ICFPC.DB
         , ICFPC.Dijkstra
         , ICFPC.Language
+        , ICFPC.Language.Combinators
         , ICFPC.Language.Eval
         , ICFPC.LambdaMan.Greedy

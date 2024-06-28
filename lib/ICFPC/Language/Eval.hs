@@ -14,7 +14,7 @@ subst v t = go
       e@EString{} -> e
       Unary op x -> Unary op (go x)
       Binary op x y -> Binary op (go x) (go y)
-      Ternary x y z -> Ternary (go x) (go y) (go z)
+      If x y z -> If (go x) (go y) (go z)
       e@(Lambda v' b)
         | v == v' -> e
         | otherwise -> Lambda v' (go b)
@@ -58,7 +58,7 @@ eval = \case
   Binary Drop (eval -> EInt x) (eval -> EString (ICFPText y))
     -> EString $! ICFPText (BS.drop (fromIntegral x) y)
 
-  Ternary (eval -> b) x y
+  If (eval -> b) x y
     | EBool True <- b -> eval x
     | EBool False <- b -> eval y
 

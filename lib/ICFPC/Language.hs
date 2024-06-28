@@ -85,7 +85,7 @@ data Token
   | TString ICFPText
   | TUnary UnaryOp
   | TBinary BinaryOp
-  | TTernary
+  | TIf
   | TLambda Natural
   | TVar Natural
   deriving stock (Eq, Ord, Show)
@@ -187,7 +187,7 @@ parseToken = Attoparsec.anyChar >>= \case
   'S' -> TString <$> parseString
   'U' -> TUnary <$> parseUnaryOp
   'B' -> TBinary <$> parseBinaryOp
-  '?' -> pure TTernary
+  '?' -> pure TIf
   'L' -> TLambda <$> parseInteger
   'v' -> TVar <$> parseInteger
   c -> fail $ "parseToken " <> show c
@@ -200,7 +200,7 @@ formatToken = \case
   TString x -> B.char8 'S' <> formatString x
   TUnary x -> B.char8 'U' <> formatUnaryOp x
   TBinary x -> B.char8 'B' <> formatBinaryOp x
-  TTernary -> B.char8 '?'
+  TIf -> B.char8 '?'
   TLambda i -> B.char8 'L' <> formatInteger i
   TVar i -> B.char8 'v' <> formatInteger i
 
@@ -222,7 +222,7 @@ data Expr
   | EString ICFPText
   | Unary UnaryOp Expr
   | Binary BinaryOp Expr Expr
-  | Ternary Expr Expr Expr
+  | If Expr Expr Expr
   | Lambda Natural Expr
   | Var Natural
   deriving stock (Eq, Ord, Show)
@@ -236,7 +236,7 @@ parseExpr = do
     TString x -> pure $ EString x
     TUnary op -> Unary op <$> parseExpr
     TBinary op -> Binary op <$> parseExpr <*> parseExpr
-    TTernary -> Ternary <$> parseExpr <*> parseExpr <*> parseExpr
+    TIf -> If <$> parseExpr <*> parseExpr <*> parseExpr
     TLambda i -> Lambda i <$> parseExpr
     TVar i -> pure $ Var i
 
@@ -248,7 +248,7 @@ formatExpr = \case
   Unary op x -> formatToken (TUnary op) <> B.char8 ' ' <> formatExpr x
   Binary op x y -> formatToken (TBinary op) <> B.char8 ' ' <> formatExpr x
     <> B.char8 ' ' <> formatExpr y
-  Ternary x y z -> B.char8 '?' <> B.char8 ' ' <> formatExpr x
+  If x y z -> B.char8 '?' <> B.char8 ' ' <> formatExpr x
     <> B.char8 ' ' <> formatExpr y
     <> B.char8 ' ' <> formatExpr z
   Lambda i x -> formatToken (TLambda i) <> B.char8 ' ' <> formatExpr x
