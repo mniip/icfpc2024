@@ -75,6 +75,7 @@ library
     build-depends:
           base
         , aeson
+        , attoparsec
         , bytestring
         , contravariant
         , safe-exceptions
@@ -83,6 +84,7 @@ library
         , hasql-th
         , http-client-tls
         , http-media
+        , primitive
         , profunctors
         , servant
         , servant-client
@@ -93,3 +95,4 @@ library
     exposed-modules:
         , ICFPC.API
         , ICFPC.DB
+        , ICFPC.Language

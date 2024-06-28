@@ -2,13 +2,12 @@ module ICFPC.API where
 
 import Control.Exception.Safe
 import Data.Aeson
-import Data.Bifunctor
+import Data.ByteString (ByteString)
 import Data.ByteString.Lazy qualified as BSL
 import Data.FileEmbed
 import Data.Proxy
 import Data.Text (Text)
 import Data.Text qualified as T
-import Data.Text.Encoding qualified as T
 import GHC.Generics (Generic)
 import Network.HTTP.Client.TLS
 import Network.HTTP.Media qualified as M
@@ -34,11 +33,11 @@ data ICFPText
 instance Accept ICFPText where
     contentType _ = "text" M.// "icfp"
 
-instance MimeRender ICFPText Text where
-  mimeRender _ = BSL.fromStrict . T.encodeUtf8
+instance MimeRender ICFPText ByteString where
+  mimeRender _ = BSL.fromStrict
 
-instance MimeUnrender ICFPText Text where
-  mimeUnrender _ = first displayException . T.decodeUtf8' . BSL.toStrict
+instance MimeUnrender ICFPText ByteString where
+  mimeUnrender _ = Right . BSL.toStrict
 
 data API mode = API
   { getTeamInfo :: mode
@@ -49,8 +48,8 @@ data API mode = API
     :> Get '[JSON] Scoreboard
   , postCommunicate :: mode
     :- "communicate"
-    :> ReqBody '[ICFPText] Text
-    :> Post '[ICFPText] Text
+    :> ReqBody '[ICFPText] ByteString
+    :> Post '[ICFPText] ByteString
   }
   deriving stock (Generic)
 

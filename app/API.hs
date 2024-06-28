@@ -1,6 +1,6 @@
 import Control.Monad
 import Data.Foldable
-import Data.Text.IO qualified as T
+import Data.ByteString qualified as BS
 import ICFPC.API
 import Options.Applicative
 
@@ -17,9 +17,9 @@ printScoreboard = do
 
 communicate :: IO ()
 communicate = do
-  input <- T.getContents
+  input <- BS.getContents
   output <- api.postCommunicate input
-  T.putStr output
+  BS.putStr output
 
 options :: ParserInfo (IO ())
 options = info
