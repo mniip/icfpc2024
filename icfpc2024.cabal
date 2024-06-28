@@ -75,14 +75,15 @@ library
           base
         , aeson
         , bytestring
+        , contravariant
         , safe-exceptions
         , file-embed
         , hasql
         , http-client-tls
-        , rel8
         , servant
         , servant-client
         , text
+        , uuid
     hs-source-dirs: lib
     exposed-modules:
         , ICFPC.API
