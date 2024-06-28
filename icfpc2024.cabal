@@ -71,6 +71,12 @@ executable api
         , bytestring
         , text
 
+executable lambdaman
+    import: executables
+    main-is: Lambdaman.hs
+    build-depends:
+	  array
+
 library
     import: common
     build-depends:
