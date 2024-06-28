@@ -94,6 +94,7 @@ library
         , http-media
         , primitive
         , profunctors
+        , pqueue
         , servant
         , servant-client
         , text
@@ -103,5 +104,7 @@ library
     exposed-modules:
         , ICFPC.API
         , ICFPC.DB
+        , ICFPC.Dijkstra
         , ICFPC.Language
         , ICFPC.Language.Eval
+        , ICFPC.LambdaMan.Greedy
