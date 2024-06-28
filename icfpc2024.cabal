@@ -83,6 +83,7 @@ library
         , servant
         , servant-client
         , text
+        , time
         , uuid
     hs-source-dirs: lib
     exposed-modules:

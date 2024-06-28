@@ -11,6 +11,7 @@ import Data.Functor.Contravariant
 import Data.Functor.Contravariant.Divisible
 import Data.Int
 import Data.Text (Text)
+import Data.Time
 import Data.UUID
 import GHC.Generics
 import Hasql.Connection
@@ -95,6 +96,7 @@ data Solution = Solution
   , submission :: Text
   , score :: Int32
   , parent :: Maybe SolutionID
+  , createdAt :: UTCTime
   } deriving stock (Eq, Ord, Show, Generic)
 
 solutionRow :: Dec.Row Solution
@@ -104,12 +106,13 @@ solutionRow = do
   submission <- Dec.column do Dec.nonNullable Dec.text
   score <- Dec.column do Dec.nonNullable Dec.int4
   parent <- Dec.column do Dec.nullable $ SolutionID <$> Dec.uuid
+  createdAt <- Dec.column do Dec.nonNullable Dec.timestamptz
   pure Solution{..}
 
 selectSolution :: SolutionID -> Connection -> IO Solution
 selectSolution u = either throwIO pure <=< Session.run do
   Session.statement u $ Statement
-    "SELECT problem_id, id, submission, score, parent\
+    "SELECT problem_id, id, submission, score, parent, created_at\
     \ FROM solutions WHERE id = $1"
     do Enc.param $ Enc.nonNullable $ unSolutionID >$< Enc.uuid
     do Dec.singleRow solutionRow
@@ -118,7 +121,7 @@ selectSolution u = either throwIO pure <=< Session.run do
 selectSolutions :: ProblemID -> Connection -> IO [Solution]
 selectSolutions u = either throwIO pure <=< Session.run do
   Session.statement u $ Statement
-    "SELECT problem_id, id, submission, score, parent\
+    "SELECT problem_id, id, submission, score, parent, created_at\
     \ FROM solutions WHERE problem_id = $1"
     do Enc.param $ Enc.nonNullable $ unProblemID >$< Enc.int4
     do Dec.rowList solutionRow
@@ -128,7 +131,7 @@ selectBestSolutions :: Connection -> IO [Solution]
 selectBestSolutions = either throwIO pure <=< Session.run do
   Session.statement () $ Statement
     "SELECT DISTINCT ON (problem_id)\
-    \ problem_id, id, submission, score, parent\
+    \ problem_id, id, submission, score, parent, created_at\
     \ FROM solutions ORDER BY problem_id, score DESC"
     do Enc.noParams
     do Dec.rowList solutionRow
@@ -137,7 +140,7 @@ selectBestSolutions = either throwIO pure <=< Session.run do
 selectAllSolutions :: Connection -> IO [Solution]
 selectAllSolutions = either throwIO pure <=< Session.run do
   Session.statement () $ Statement
-    "SELECT problem_id, id, submission, score, parent\
+    "SELECT problem_id, id, submission, score, parent, created_at\
     \ FROM solutions"
     do Enc.noParams
     do Dec.rowList solutionRow
