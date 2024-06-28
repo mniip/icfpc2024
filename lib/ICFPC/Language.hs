@@ -80,8 +80,7 @@ data BinaryOp
   deriving stock (Eq, Ord, Show)
 
 data Token
-  = TFalse
-  | TTrue
+  = TBool Bool
   | TInt Natural
   | TString ICFPText
   | TUnary UnaryOp
@@ -100,18 +99,24 @@ charValue c = fromEnum c - fromEnum '!'
 unCharValue :: Int -> Char
 unCharValue i = toEnum (i + fromEnum '!')
 
+icfpToInt :: ByteString -> Natural
+icfpToInt = BS.foldl' (\n c -> n * 94 + fromIntegral c) 0
+
+icfpFromInt :: Natural -> ByteString
+icfpFromInt 0 = BS.pack [0]
+icfpFromInt k = BS.pack $ go k []
+  where
+    go 0 xs = xs
+    go n xs = case divMod n 94 of
+      (d, m) -> go d (fromIntegral m : xs)
+
 parseInteger :: Attoparsec.Parser Natural
 parseInteger = Attoparsec.takeWhile validChar
-  <&> BS8.foldl' (\n c -> n * 94 + fromIntegral (charValue c)) 0
+  <&> BS.map (subtract $ fromIntegral $ fromEnum '!')
+  <&> icfpToInt
 
 formatInteger :: Natural -> Builder
-formatInteger = \case
-  0 -> B.char8 (unCharValue 0)
-  m -> go m mempty
-  where
-    go 0 b = b
-    go n b = case divMod n 94 of
-      (d, m) -> go d (B.char8 (unCharValue $ fromIntegral m) <> b)
+formatInteger = B.byteString . icfpFromInt
 
 parseString :: Attoparsec.Parser ICFPText
 parseString = Attoparsec.takeWhile validChar
@@ -127,8 +132,8 @@ parseUnaryOp :: Attoparsec.Parser UnaryOp
 parseUnaryOp = Attoparsec.anyChar >>= \case
   '-' -> pure Neg
   '!' -> pure Not
-  '#' -> pure Int2Str
-  '$' -> pure Str2Int
+  '#' -> pure Str2Int
+  '$' -> pure Int2Str
   c -> fail $ "parseUnaryOp " <> show c
 
 formatUnaryOp :: UnaryOp -> Builder
@@ -175,8 +180,8 @@ formatBinaryOp = \case
 
 parseToken :: Attoparsec.Parser Token
 parseToken = Attoparsec.anyChar >>= \case
-  'F' -> pure TFalse
-  'T' -> pure TTrue
+  'F' -> pure $ TBool False
+  'T' -> pure $ TBool True
   'I' -> TInt <$> parseInteger
   'S' -> TString <$> parseString
   'U' -> TUnary <$> parseUnaryOp
@@ -188,8 +193,8 @@ parseToken = Attoparsec.anyChar >>= \case
 
 formatToken :: Token -> Builder
 formatToken = \case
-  TFalse -> B.char8 'F'
-  TTrue -> B.char8 'T'
+  TBool False -> B.char8 'F'
+  TBool True -> B.char8 'T'
   TInt x -> B.char8 'I' <> formatInteger x
   TString x -> B.char8 'S' <> formatString x
   TUnary x -> B.char8 'U' <> formatUnaryOp x
@@ -211,9 +216,8 @@ encodeTokenStream (x0:xs0) = BSL.toStrict $ B.toLazyByteString
     go (x:xs) = B.char8 ' ' <> formatToken x <> go xs
 
 data Expr
-  = EFalse
-  | ETrue
-  | EInt Natural
+  = EBool Bool
+  | EInt Integer -- never negative in syntax, sometimes in intermediate values
   | EString ICFPText
   | Unary UnaryOp Expr
   | Binary BinaryOp Expr Expr
@@ -226,9 +230,8 @@ parseExpr :: Attoparsec.Parser Expr
 parseExpr = do
   void $ optional $ Attoparsec.char ' '
   parseToken >>= \case
-    TFalse -> pure EFalse
-    TTrue -> pure ETrue
-    TInt x -> pure $ EInt x
+    TBool b -> pure $ EBool b
+    TInt x -> pure $ EInt $ toInteger x
     TString x -> pure $ EString x
     TUnary op -> Unary op <$> parseExpr
     TBinary op -> Binary op <$> parseExpr <*> parseExpr
@@ -238,9 +241,8 @@ parseExpr = do
 
 formatExpr :: Expr -> Builder
 formatExpr = \case
-  EFalse -> formatToken TFalse
-  ETrue -> formatToken TTrue
-  EInt x -> formatToken $ TInt x
+  EBool x -> formatToken $ TBool x
+  EInt x -> formatToken $ TInt $ fromInteger x
   EString x -> formatToken $ TString x
   Unary op x -> formatToken (TUnary op) <> B.char8 ' ' <> formatExpr x
   Binary op x y -> formatToken (TBinary op) <> B.char8 ' ' <> formatExpr x

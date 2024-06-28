@@ -79,6 +79,7 @@ library
         , attoparsec
         , bytestring
         , contravariant
+        , containers
         , safe-exceptions
         , file-embed
         , hasql
@@ -97,3 +98,4 @@ library
         , ICFPC.API
         , ICFPC.DB
         , ICFPC.Language
+        , ICFPC.Language.Eval

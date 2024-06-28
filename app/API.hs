@@ -3,7 +3,10 @@ import Data.Foldable
 import Data.ByteString qualified as BS
 import ICFPC.API
 import ICFPC.Language
+import ICFPC.Language.Eval
 import Options.Applicative
+import System.IO
+
 
 printTeamInfo :: IO ()
 printTeamInfo = do
@@ -23,7 +26,11 @@ communicate = do
     $ EString $ icfpFromByteString input
   case decodeExpr output of
     EString s -> BS.putStr $ icfpToByteString s
-    e -> print e
+    e -> do
+      hPutStrLn stderr $ "Got term: " <> show e
+      case eval e of
+        EString s -> BS.putStr $ icfpToByteString s
+        e' -> print e'
 
 options :: ParserInfo (IO ())
 options = info
