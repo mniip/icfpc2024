@@ -1,11 +1,19 @@
 import Data.List (nub, sort, minimumBy)
 import Data.Function (on)
 
+fancyPlan :: Int -> [Int]
+fancyPlan 0 = []
+fancyPlan 1 = [1, -1]
+fancyPlan d = replicate n 1 ++ replicate (n-1) (-1) ++ replicate (d - n*n) 0 ++ [-1]
+    where n = root 1
+          root i | d >= i*i && (i+1)*(i+1) > d = i
+                 | otherwise = root (i+1)
+
 -- Land with zero velocity on the target
 fromTo :: Int -> Int -> [Int]
 fromTo a b | a == b = []
-           | a < b = [1] ++ (replicate (b-a-1) 0) ++ [-1]
-           | a > b = [-1] ++ (replicate (a-b-1) 0) ++ [1]
+           | a < b = fancyPlan (b-a) -- [1] ++ (replicate (b-a-1) 0) ++ [-1]
+           | a > b = reverse (fromTo b a)
 
 -- Combine two trajectories
 combine :: (Int, Int) -> (Int, Int) -> [(Int, Int)]
