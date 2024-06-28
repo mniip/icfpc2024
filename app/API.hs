@@ -1,9 +1,7 @@
-import Control.Applicative
 import Control.Monad
 import Data.Foldable
 import ICFPC.API
 import Options.Applicative
-import System.Environment
 
 printTeamInfo :: IO ()
 printTeamInfo = do
