@@ -71,15 +71,18 @@ executable api
         , bytestring
         , text
 
-executable lambdaman
+executable lambdaman-manual
     import: executables
-    main-is: Lambdaman.hs
+    main-is: LambdaManManual.hs
     build-depends:
           array
+        , bytestring
 
 executable lambdaman-greedy
     import: executables
     main-is: LambdaManGreedy.hs
+    build-depends:
+          bytestring
 
 executable spaceship
     import: executables
@@ -118,4 +121,5 @@ library
         , ICFPC.Language.Combinators
         , ICFPC.Language.Eval
         , ICFPC.Language.TH
+        , ICFPC.LambdaMan
         , ICFPC.LambdaMan.Greedy

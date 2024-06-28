@@ -123,9 +123,29 @@ baseDecoder dictionary = [|\self n -> if n == 0
       in take 1 (drop r $(pure $ LitE $ StringL dictionary)) <> self self q
   |]
 
+baseDecoderDouble :: String -> Q Exp
+baseDecoderDouble dictionary = [|\self n -> if n == 0
+    then ""
+    else
+      let
+        q = n `quot` 4
+        r = (n `rem` 4) * 2
+      in take 2 (drop r $(pure $ LitE $ StringL $ dictionary <* [(),()])) <> self self q
+  |]
+
 encodeBase :: String -> String -> Integer
 encodeBase dictionary = go
   where
     go [] = 0
-    go (x:xs) = toInteger (fromJust $ elemIndex x "UDLR")
+    go (x:xs) = toInteger (fromJust $ elemIndex x dictionary)
       + toInteger (length dictionary) * go xs
+
+encodeBaseDouble :: String -> String -> Integer
+encodeBaseDouble dictionary = go
+  where
+    go [] = 0
+    go (x:x':xs)
+      | x == x'
+      = toInteger (fromJust $ elemIndex x dictionary)
+        + toInteger (length dictionary) * go xs
+    go xs = error $ take 2 xs

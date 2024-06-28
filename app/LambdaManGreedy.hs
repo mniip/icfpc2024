@@ -1,8 +1,10 @@
+import Data.ByteString qualified as BS
+import ICFPC.LambdaMan
 import ICFPC.LambdaMan.Greedy
 
 
 main :: IO ()
 main = do
-  input <- parseInput <$> getContents
+  input <- parseInput <$> BS.getContents
   let sol = greedySolution input
-  putStrLn $ show =<< sol
+  putStrLn $ showDirection <$> sol
