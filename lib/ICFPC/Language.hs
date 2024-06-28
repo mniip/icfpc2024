@@ -3,9 +3,13 @@ module ICFPC.Language where
 import Control.Applicative
 import Data.Attoparsec.ByteString.Char8 qualified as Attoparsec
 import Data.ByteString (ByteString)
+import Data.ByteString.Builder (Builder)
+import Data.ByteString.Builder qualified as B
 import Data.ByteString.Char8 qualified as BS8
+import Data.ByteString.Lazy qualified as BSL
 import Data.Primitive.PrimArray
 import Data.Functor
+import Data.List
 import Data.Text (Text)
 import Data.Text.Encoding qualified as T
 import Numeric.Natural
@@ -53,9 +57,21 @@ validChar c = c >= '!' && c <= '~'
 charValue :: Char -> Int
 charValue c = fromEnum c - fromEnum '!'
 
+unCharValue :: Int -> Char
+unCharValue i = toEnum (i + fromEnum '!')
+
 parseInteger :: Attoparsec.Parser Natural
 parseInteger = Attoparsec.takeWhile validChar
   <&> BS8.foldl' (\n c -> n * 94 + fromIntegral (charValue c)) 0
+
+formatInteger :: Natural -> Builder
+formatInteger = \case
+  0 -> B.char8 (unCharValue 0)
+  m -> go m mempty
+  where
+    go 0 b = b
+    go n b = case divMod n 94 of
+      (d, m) -> go d (B.char8 (unCharValue $ fromIntegral m) <> b)
 
 encoding :: PrimArray Char
 encoding = primArrayFromList
@@ -67,6 +83,18 @@ parseString = Attoparsec.takeWhile validChar
   <&> BS8.map (indexPrimArray encoding . charValue)
   <&> T.decodeASCII
 
+decoding :: PrimArray Char
+decoding = primArrayFromList
+  [ case findIndex (== c) $ primArrayToList encoding of
+    Just i -> unCharValue i
+    Nothing -> '\NUL'
+  | c <- take 128 [minBound..] ]
+
+formatString :: Text -> Builder
+formatString = B.byteString
+  . BS8.map (indexPrimArray decoding . fromEnum)
+  . T.encodeUtf8
+
 parseUnaryOp :: Attoparsec.Parser UnaryOp
 parseUnaryOp = Attoparsec.anyChar >>= \case
   '-' -> pure Neg
@@ -74,6 +102,13 @@ parseUnaryOp = Attoparsec.anyChar >>= \case
   '#' -> pure Int2Str
   '$' -> pure Str2Int
   c -> fail $ "parseUnaryOp " <> show c
+
+formatUnaryOp :: UnaryOp -> Builder
+formatUnaryOp = \case
+  Neg -> B.char8 '-'
+  Not -> B.char8 '!'
+  Int2Str -> B.char8 '#'
+  Str2Int -> B.char8 '$'
 
 parseBinaryOp :: Attoparsec.Parser BinaryOp
 parseBinaryOp = Attoparsec.anyChar >>= \case
@@ -93,6 +128,23 @@ parseBinaryOp = Attoparsec.anyChar >>= \case
   '$' -> pure Apply
   c -> fail $ "parseBinaryOp" <> show c
 
+formatBinaryOp :: BinaryOp -> Builder
+formatBinaryOp = \case
+  Add -> B.char8 '+'
+  Subtract -> B.char8 '-'
+  Multiply -> B.char8 '*'
+  Divide -> B.char8 '/'
+  Modulo -> B.char8 '%'
+  Less -> B.char8 '<'
+  Greater -> B.char8 '>'
+  Equal -> B.char8 '='
+  Or -> B.char8 '|'
+  And -> B.char8 '&'
+  Concat -> B.char8 '.'
+  Take -> B.char8 'T'
+  Drop -> B.char8 'D'
+  Apply -> B.char8 '$'
+
 parseToken :: Attoparsec.Parser Token
 parseToken = Attoparsec.anyChar >>= \case
   'F' -> pure TFalse
@@ -106,9 +158,29 @@ parseToken = Attoparsec.anyChar >>= \case
   'v' -> TVar <$> parseInteger
   c -> fail $ "parseToken " <> show c
 
+formatToken :: Token -> Builder
+formatToken = \case
+  TFalse -> B.char8 'F'
+  TTrue -> B.char8 'T'
+  TInt x -> B.char8 'I' <> formatInteger x
+  TString x -> B.char8 'S' <> formatString x
+  TUnary x -> formatUnaryOp x
+  TBinary x -> formatBinaryOp x
+  TTernary -> B.char8 '?'
+  TLambda i -> B.char8 'L' <> formatInteger i
+  TVar i -> B.char8 'v' <> formatInteger i
+
 decodeTokenStream :: ByteString -> [Token]
 decodeTokenStream = either error id . Attoparsec.parseOnly do
   Attoparsec.sepBy parseToken (Attoparsec.char ' ') <* Attoparsec.endOfInput
+
+encodeTokenStream :: [Token] -> ByteString
+encodeTokenStream [] = mempty
+encodeTokenStream (x0:xs0) = BSL.toStrict $ B.toLazyByteString
+  $ formatToken x0 <> go xs0
+  where
+    go [] = mempty
+    go (x:xs) = formatToken x <> B.char8 ' ' <> go xs
 
 data Expr
   = EFalse
@@ -136,6 +208,23 @@ parseExpr = do
     TLambda i -> Lambda i <$> parseExpr
     TVar i -> pure $ Var i
 
+formatExpr :: Expr -> Builder
+formatExpr = \case
+  EFalse -> formatToken TFalse
+  ETrue -> formatToken TTrue
+  EInt x -> formatToken $ TInt x
+  EString x -> formatToken $ TString x
+  Unary op x -> formatUnaryOp op <> B.char8 ' ' <> formatExpr x
+  Binary op x y -> formatBinaryOp op <> B.char8 ' ' <> formatExpr x
+    <> B.char8 ' ' <> formatExpr y
+  Ternary x y z -> formatExpr x <> B.char8 ' ' <> formatExpr y
+    <> B.char8 ' ' <> formatExpr z
+  Lambda i x -> formatToken (TLambda i) <> B.char8 ' ' <> formatExpr x
+  Var i -> formatToken (TVar i)
+
 decodeExpr :: ByteString -> Expr
 decodeExpr = either error id . Attoparsec.parseOnly do
   parseExpr <* Attoparsec.endOfInput
+
+encodeExpr :: Expr -> ByteString
+encodeExpr = BSL.toStrict . B.toLazyByteString . formatExpr
