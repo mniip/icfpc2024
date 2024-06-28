@@ -2,6 +2,7 @@ import Control.Monad
 import Data.Foldable
 import Data.ByteString qualified as BS
 import ICFPC.API
+import ICFPC.Language
 import Options.Applicative
 
 printTeamInfo :: IO ()
@@ -18,8 +19,11 @@ printScoreboard = do
 communicate :: IO ()
 communicate = do
   input <- BS.getContents
-  output <- api.postCommunicate input
-  BS.putStr output
+  output <- api.postCommunicate $ encodeExpr
+    $ EString $ icfpFromByteString input
+  case decodeExpr output of
+    EString s -> BS.putStr $ icfpToByteString s
+    e -> print e
 
 options :: ParserInfo (IO ())
 options = info

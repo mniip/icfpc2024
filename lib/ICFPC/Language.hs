@@ -19,34 +19,41 @@ import Numeric.Natural
 newtype ICFPText = ICFPText ByteString
   deriving stock (Eq, Ord)
 
-encoding :: PrimArray Char
-encoding = primArrayFromList
+icfpToByteString :: ICFPText -> ByteString
+icfpToByteString (ICFPText bs) = BS.map (indexPrimArray encoding . fromEnum) bs
+
+encoding :: PrimArray Word8
+encoding = primArrayFromList $ toEnum . fromEnum <$>
   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!\"#$%&'()*+,-\
   \./:;<=>?@[\\]^_`|~ \n"
-
-instance Show ICFPText where
-  showsPrec d (ICFPText pa)
-    | '\n' `elem` decoded = showString "\"\\\n\\"
-      . showString formatted
-      . showString "\\\n\\\""
-    | otherwise = showsPrec d  decoded
-    where
-      decoded = map (indexPrimArray encoding . fromEnum) $ BS.unpack pa
-      formatted = decoded >>= \case
-        '\n' -> "\\n\\\n\\"
-        '"' -> "\""
-        '\'' -> "'"
-        c -> let w = show c in drop 1 $ zipWith const w $ drop 1 w
 
 decoding :: PrimArray Word8
 decoding = primArrayFromList
   [ case findIndex (== c) $ primArrayToList encoding of
     Just i -> toEnum i
     Nothing -> 0xFF
-  | c <- take 128 [minBound..] ]
+  | c <- [0..127] ]
+
+icfpFromByteString :: ByteString -> ICFPText
+icfpFromByteString = ICFPText . BS.map (indexPrimArray decoding . fromEnum)
+
+instance Show ICFPText where
+  showsPrec d str
+    | '\n' `elem` decoded = showString "\"\\\n\\"
+      . showString formatted
+      . showString "\\\n\\\""
+    | otherwise = showsPrec d  decoded
+    where
+      decoded = BS8.unpack $ icfpToByteString str
+      formatted = decoded >>= \case
+        '\n' -> "\\n\\\n\\"
+        '"' -> "\""
+        '\'' -> "'"
+        c -> let w = show c in drop 1 $ zipWith const w $ drop 1 w
+
 
 instance IsString ICFPText where
-  fromString = ICFPText . BS.map (indexPrimArray decoding . fromEnum) . BS8.pack
+  fromString = icfpFromByteString . BS8.pack
 
 data UnaryOp
   = Neg
