@@ -50,16 +50,18 @@ selectProblems = either throwIO pure <=< Session.run do
     |]
 
 data ProblemInsert = ProblemInsert
-  { statement :: Text
+  { problemID :: ProblemID
+  , statement :: Text
   } deriving stock (Eq, Ord, Show, Generic)
 
-insertProblem :: ProblemInsert -> Connection -> IO ProblemID
+insertProblem :: ProblemInsert -> Connection -> IO ()
 insertProblem p = either throwIO pure <=< Session.run do
   Session.statement p $ dimap
-    (\ProblemInsert{..} -> statement)
-    ProblemID
-    [singletonStatement|
-      INSERT INTO problems (statement) VALUES ($1 :: TEXT) RETURNING id :: INT4
+    (\ProblemInsert{..} -> (unProblemID problemID, statement))
+    id
+    [resultlessStatement|
+      INSERT INTO problems (problem_id, statement)
+      VALUES ($1 :: INT4, $2 :: TEXT)
     |]
 
 data ProblemUpdate = ProblemUpdate
