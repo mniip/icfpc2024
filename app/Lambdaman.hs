@@ -1,3 +1,4 @@
+{-# LANGUAGE NoOverloadedStrings #-}
 import qualified Data.Array as A
 import Data.List (elem)
 import Data.Char (toUpper)

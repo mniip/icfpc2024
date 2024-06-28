@@ -75,7 +75,7 @@ executable lambdaman
     import: executables
     main-is: Lambdaman.hs
     build-depends:
-	  array
+	      array
 
 library
     import: common
