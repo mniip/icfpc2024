@@ -68,6 +68,7 @@ executable api
     main-is: API.hs
     build-depends:
           optparse-applicative
+        , text
 
 library
     import: common
@@ -81,6 +82,7 @@ library
         , hasql
         , hasql-th
         , http-client-tls
+        , http-media
         , profunctors
         , servant
         , servant-client
