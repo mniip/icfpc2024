@@ -116,7 +116,8 @@ parseInteger = Attoparsec.takeWhile validChar
   <&> icfpToInt
 
 formatInteger :: Natural -> Builder
-formatInteger = B.byteString . icfpFromInt
+formatInteger = B.byteString
+  . BS.map (+ fromIntegral (fromEnum '!')) . icfpFromInt
 
 parseString :: Attoparsec.Parser ICFPText
 parseString = Attoparsec.takeWhile validChar
