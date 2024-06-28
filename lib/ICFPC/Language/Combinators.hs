@@ -1,71 +1,38 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
 module ICFPC.Language.Combinators where
 
 import ICFPC.Language
-import Data.ByteString qualified as BS
-import Data.String
-import Numeric.Natural
+import ICFPC.Language.TH
+import Language.Haskell.TH.Syntax
 
 
-instance Num Expr where
-  fromInteger = EInt
+lambdaman1 :: Expr
+lambdaman1 = $(lift . fromHaskell =<< [|
+    "solve lambdaman1 RRURRLLDLLLLLDURRRU"
+  |])
 
-instance IsString Expr where
-  fromString = EString . fromString
+lambdaman4 :: Expr
+lambdaman4 = $(lift . fromHaskell =<< [|
+    "solve lambdaman4 " <>
+    let go = $(baseDecoder "UDLR")
+    in go go $(lift $ encodeBase "UDLR" "RRLLLLLLUULLUURRLLDDRRDDRRUUUUDDDDRRDDLLRRUUUURRRRDDDDRRRRLLUURRRRRRLLDDRRDDLLLLRRDDLLLLLLRRDDRRDDLLLLRRRRDDDDRRRRLLUURRLLDDLLUUUUUULLUUUUDDRRRRUURRDDDDLLRRDDLLRRUUUUUUUULLUULLLLDDLLLLRRDDLLDDLLUUDDRRDDRRLLDDLLDDDDUUUUUULLDDDDLLLLDDUUUURRUUDDLLDDRRRRDDLLRRUUUUUUUULLLLDDUUUUUUUUDDDDDDRRUURRLLUUDDDDRRDDRRDDRRDDRRRRDDUULLDDUULLDDUUUUUUUUUURRUUUUUULLLLUURRRRRRRRLLDDRRRRRRLLUURR")
+  |])
 
-class AsVar t where
-  asVar :: Natural -> t
+lambdaman5 :: Expr -- not optimal
+lambdaman5 = $(lift . fromHaskell =<< [|
+    "solve lambdaman5 " <> let
+      thrice f x = f (f (f x))
+      times27 x = thrice thrice (\y -> y <> x) ""
+      p = times27 "L" <> times27 "R"
+      q = times27 "R" <> times27 "L"
+    in
+    times27 $
+      times27 (p <> "D" <> q <> "D") <> "U"
+      <> times27 (q <> "U" <> p <> "U") <> "D"
+  |])
 
-instance AsVar Natural where
-  asVar = id
-
-instance AsVar Expr where
-  asVar = Var
-
-pattern (:::) :: Expr -> Expr -> Expr
-pattern f ::: x = Binary Apply f x
-infixl 0 :::
-
-pattern (:-) :: Expr -> Expr -> Expr
-pattern x :- y = Binary Subtract x y
-infixl 6 :-
-
-pattern (:==) :: Expr -> Expr -> Expr
-pattern x :== y = Binary Equal x y
-infix 4 :==
-
-pattern (:<>) :: Expr -> Expr -> Expr
-pattern x :<> y = Binary Concat x y
-infixr 6 :<>
-
-pattern Let :: Natural -> Expr -> Expr -> Expr
-pattern Let v t r = Binary Apply (Lambda v r) t
-
-halfReplicate :: Expr
-halfReplicate = Lambda self $ Lambda n $ Lambda x $
-  If (n :== 0)
-    ""
-    (x :<> (self ::: self ::: (n :- 1) ::: x))
-  where
-    self, x, n :: AsVar t => t
-    self = asVar 0
-    n = asVar 1
-    x = asVar 2
-
-replicate' :: Expr
-replicate' = Let repl halfReplicate (repl ::: repl)
-  where
-    repl :: AsVar t => t
-    repl = asVar 0
-
-times81 :: Expr
-times81 = Lambda x $ Let triple (Lambda z $ z :<> z :<> z)
-  (triple ::: (triple ::: (triple ::: (triple ::: x))))
-  where
-    x, triple, z :: AsVar t => t
-    x = asVar 0
-    triple = asVar 1
-    z = asVar 2
-
-codeSize :: Expr -> Int
-codeSize = BS.length . encodeExpr
+lambdaman6 :: Expr
+lambdaman6 = $(lift . fromHaskell =<< [|
+    "solve lambdaman6 " <> let
+      triple x = x <> x <> x
+    in triple $ triple $ triple "RRRRRRRR"
+  |])

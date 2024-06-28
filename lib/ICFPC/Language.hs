@@ -14,6 +14,7 @@ import Data.List
 import Data.String
 import Data.Word
 import Numeric.Natural
+import ICFPC.API (api, API(..))
 
 
 newtype ICFPText = ICFPText ByteString
@@ -260,3 +261,9 @@ decodeExpr = either error id . Attoparsec.parseOnly do
 
 encodeExpr :: Expr -> ByteString
 encodeExpr = BSL.toStrict . B.toLazyByteString . formatExpr
+
+codeSize :: Expr -> Int
+codeSize = BS.length . encodeExpr
+
+communicate :: Expr -> IO Expr
+communicate = fmap decodeExpr . api.postCommunicate . encodeExpr

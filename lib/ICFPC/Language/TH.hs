@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
 module ICFPC.Language.TH where
 
 import Data.List
@@ -9,8 +10,14 @@ import Data.Set qualified as S
 import Data.String
 import ICFPC.Language
 import Language.Haskell.TH
+import Language.Haskell.TH.Syntax (Lift(..))
 import Numeric.Natural
 
+
+deriving stock instance Lift ICFPText
+deriving stock instance Lift UnaryOp
+deriving stock instance Lift BinaryOp
+deriving stock instance Lift Expr
 
 fromHaskell :: Exp -> Expr
 fromHaskell ex = snd (go ex) mempty
@@ -104,3 +111,21 @@ fromHaskell ex = snd (go ex) mempty
             (Lambda unused $ kb (M.insert name unused names))
             (kt names)
     goLet (d:_) _ = error $ "Unsupported Dec: " <> show d
+
+
+baseDecoder :: String -> Q Exp
+baseDecoder dictionary = [|\self n -> if n == 0
+    then ""
+    else
+      let
+        q = n `quot` 4
+        r = n `rem` 4
+      in take 1 (drop r $(pure $ LitE $ StringL dictionary)) <> self self q
+  |]
+
+encodeBase :: String -> String -> Integer
+encodeBase dictionary = go
+  where
+    go [] = 0
+    go (x:xs) = toInteger (fromJust $ elemIndex x "UDLR")
+      + toInteger (length dictionary) * go xs

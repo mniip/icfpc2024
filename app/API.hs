@@ -2,7 +2,7 @@ import Control.Monad
 import Data.Foldable
 import Data.ByteString qualified as BS
 import ICFPC.API
-import ICFPC.Language
+import ICFPC.Language hiding (communicate)
 import ICFPC.Language.Eval
 import Options.Applicative
 import System.IO

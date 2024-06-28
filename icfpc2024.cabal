@@ -75,7 +75,11 @@ executable lambdaman
     import: executables
     main-is: Lambdaman.hs
     build-depends:
-	      array
+          array
+
+executable lambdaman-greedy
+    import: executables
+    main-is: LambdaManGreedy.hs
 
 executable spaceship
     import: executables
