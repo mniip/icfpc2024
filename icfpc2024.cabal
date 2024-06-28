@@ -97,6 +97,7 @@ library
         , pqueue
         , servant
         , servant-client
+        , template-haskell
         , text
         , time
         , uuid
@@ -108,4 +109,5 @@ library
         , ICFPC.Language
         , ICFPC.Language.Combinators
         , ICFPC.Language.Eval
+        , ICFPC.Language.TH
         , ICFPC.LambdaMan.Greedy
