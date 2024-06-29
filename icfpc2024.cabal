@@ -115,6 +115,10 @@ executable 3d-sim
     main-is: ThreeD.hs
     build-depends: containers
 
+executable efficiency
+    import: executables
+    main-is: Efficiency.hs
+
 library
     import: common
     build-depends:
@@ -124,6 +128,7 @@ library
         , bytestring
         , contravariant
         , containers
+        , ghc-heap
         , safe-exceptions
         , file-embed
         , hashable
