@@ -52,7 +52,6 @@ instance Show ICFPText where
         '\'' -> "'"
         c -> let w = show c in drop 1 $ zipWith const w $ drop 1 w
 
-
 instance IsString ICFPText where
   fromString = icfpFromByteString . BS8.pack
 

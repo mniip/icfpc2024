@@ -141,10 +141,12 @@ library
         , time
         , uuid
         , unordered-containers
+        , vector
     hs-source-dirs: lib
     exposed-modules:
         , ICFPC.API
         , ICFPC.DB
+        , ICFPC.DB.LambdaMan
         , ICFPC.Dijkstra
         , ICFPC.Language
         , ICFPC.Language.Combinators
