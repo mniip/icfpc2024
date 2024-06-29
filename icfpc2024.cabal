@@ -105,6 +105,10 @@ executable spaceship-dumb
     import: executables
     main-is: SpaceshipDumb.hs
 
+executable spaceship-greedy
+    import: executables
+    main-is: SpaceshipGreedy.hs
+
 library
     import: common
     build-depends:

@@ -1,10 +1,15 @@
 module ICFPC.Spaceship where
 
+import Control.Applicative
 import Data.Bifunctor
 import Data.Functor
 import Data.IntMap.Strict (IntMap)
 import Data.IntMap.Strict qualified as IM
+import Data.List
 import Data.Maybe
+import Data.Ord
+
+import Debug.Trace
 
 
 type X = Int
@@ -113,3 +118,46 @@ dumbSolution input = go (0, 0, 0, 0) input.points
       in zip asx asy ++ go (x1, y1, vx1, vy1) ps
     go _ [] = []
 
+-- go for closest according to heuristic
+greedySolution :: Input -> [(AX, AY)]
+greedySolution input = pick (0, 0, 0, 0) input.points
+  where
+    go _ q _ | trace ("Picked " <> show q) False = undefined
+    go (!x0, !y0, !vx0, !vy0) (!x1, !y1) ps = let
+        (!t, !vx1, !vy1) = reachGreedily (x0, y0, vx0, vy0) (x1, y1)
+        asx = backtrack t (x0, vx0) (x1, vx1)
+        asy = backtrack t (y0, vy0) (y1, vy1)
+      in zip asx asy ++ pick (x1, y1, vx1, vy1) ps
+
+    pick _ [] = []
+    pick st points = let
+        p = minimumBy (comparing $ heuristic st) points
+      in go st p (delete p points)
+
+    heuristic (!x0, !y0, !vx0, !vy0) (!x1, !y1) = mergeWith max
+      (mergeWith min
+        (timeEstimate x0 vx0 x1 1)
+        (timeEstimate x0 vx0 x1 (-1)))
+      (mergeWith min
+        (timeEstimate y0 vy0 y1 1)
+        (timeEstimate y0 vy0 y1 (-1)))
+
+    mergeWith f (Just x) (Just y) = Just (f x y)
+    mergeWith _ p q = p <|> q
+
+    timeEstimate x0 v0 x1 a = twicePositiveRoot
+      (a / 2)
+      (fromIntegral v0 + a / 2)
+      (fromIntegral (x0 - x1))
+
+    twicePositiveRoot a b c
+      | d >= 0
+      , p >= 0 = Just p
+      | d >= 0
+      , q >= 0 = Just q
+      | otherwise = Nothing
+      where
+        d :: Double
+        d = b * b - 4 * a * c
+        p = -b - sqrt d
+        q = -b + sqrt d
