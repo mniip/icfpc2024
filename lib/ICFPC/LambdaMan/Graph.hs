@@ -83,7 +83,7 @@ renameGraph m = (m', naming)
 breadthFirstGraph :: Int -> Map Int (Map Int [Direction]) -> [Direction]
 breadthFirstGraph initV distances
   = trace ("Renamed graph: " <> graph2Dot distances)
-  $ case dijkstra initial (IS.null . snd) adjacent of
+  $ case dijkstraHashable initial (IS.null . snd) adjacent of
     Just (_, segments) -> segments >>= \(i, j) -> distances M.! i M.! j
     Nothing -> error "No solution"
   where

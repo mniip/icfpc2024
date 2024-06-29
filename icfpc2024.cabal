@@ -101,6 +101,10 @@ executable spaceship
     import: executables
     main-is: Spaceship.hs
 
+executable spaceship-dumb
+    import: executables
+    main-is: SpaceshipDumb.hs
+
 library
     import: common
     build-depends:
@@ -141,3 +145,4 @@ library
         , ICFPC.LambdaMan.BreadthFirst
         , ICFPC.LambdaMan.Graph
         , ICFPC.LambdaMan.Greedy
+        , ICFPC.Spaceship
