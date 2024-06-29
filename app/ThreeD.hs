@@ -122,7 +122,7 @@ usualStep grid = if length writePoss /= length (nub writePoss)
                                 (Just Div, Just (Num v1), _, Just (Num v2), _) -> ([(x-1, y), (x, y-1)], [((x+1, y), Num $ v1 `quot` v2), ((x, y+1), Num $ v1 `quot` v2)])
                                 (Just Mod, Just (Num v1), _, Just (Num v2), _) -> ([(x-1, y), (x, y-1)], [((x+1, y), Num $ v1 `rem` v2), ((x, y+1), Num $ v1 `rem` v2)])
                                 (Just Equal, Just v1, _, Just v2, _) -> if v1 == v2 then ([(x-1, y), (x, y-1)], [((x+1, y), v1), ((x, y+1), v1)]) else ([], [])
-                                (Just NotEq, Just v1, _, Just v2, _) -> if v1 == v2 then ([(x-1, y), (x, y-1)], [((x+1, y), v2), ((x, y+1), v1)]) else ([], [])
+                                (Just NotEq, Just v1, _, Just v2, _) -> if v1 /= v2 then ([(x-1, y), (x, y-1)], [((x+1, y), v2), ((x, y+1), v1)]) else ([], [])
                                 _ -> ([], [])
 
 -- The history of our program, most recent snapshots being at the front
@@ -140,7 +140,9 @@ evaluate grid a b = go [grid0]
     where grid0 = setupInputs grid a b
           go uni = do
               putStrLn $ printGrid (head uni)
-              go $ eval uni
+              let uni' = eval uni
+              _ <- getLine
+              if head uni == head uni' then error "Stable configuration" else go uni'
 
 main = do
     [file, a, b] <- getArgs
