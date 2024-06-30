@@ -82,3 +82,22 @@ parseNumpad = \case
   '8' -> SpaceshipCommand 0 1
   '9' -> SpaceshipCommand 1 1
   p -> error $ "parseNumpad: " <> show p
+
+formatManoeuvres :: [(Int, SpaceshipVel)] -> ByteString
+formatManoeuvres input = BSL.toStrict $ B.toLazyByteString
+  $ flip foldMap input \(t, SpaceshipVel{x, y}) ->
+    B.intDec t <> B.char8 ' '
+      <> B.intDec x <> B.char8 ' ' <> B.intDec y <> B.char8 '\n'
+
+parseManoeuvres :: ByteString -> [(Int, SpaceshipVel)]
+parseManoeuvres = either error id . Attoparsec.parseOnly do
+  mans <- Attoparsec.many' do
+    t <- Attoparsec.signed Attoparsec.decimal
+    Attoparsec.char8 ' '
+    x <- Attoparsec.signed Attoparsec.decimal
+    Attoparsec.char8 ' '
+    y <- Attoparsec.signed Attoparsec.decimal
+    Attoparsec.char8 '\n'
+    pure (t, SpaceshipVel{x, y})
+  Attoparsec.endOfInput
+  pure mans

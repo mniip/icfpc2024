@@ -1,7 +1,7 @@
 cabal-version: 3.0
 name: icfpc2024
 version: 0.0.0.0
-extra-source-files: token
+extra-source-files: token db_settings
 
 common common
     default-language: GHC2021
@@ -101,7 +101,8 @@ executable spaceship
     main-is: Spaceship.hs
     build-depends:
            array
-        ,  random
+         , bytestring
+         , random
 
 executable spaceship-dumb
     import: executables

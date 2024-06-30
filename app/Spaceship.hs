@@ -1,4 +1,5 @@
 import qualified Data.Array as A
+import Data.ByteString qualified as BS
 import Data.List
 import Debug.Trace
 import System.Random
