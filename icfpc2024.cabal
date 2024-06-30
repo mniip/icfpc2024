@@ -158,6 +158,7 @@ library
         , ICFPC.Language.Combinators
         , ICFPC.Language.Eval
         , ICFPC.Language.TH
+        , ICFPC.Language.Pretty
         , ICFPC.LambdaMan
         , ICFPC.LambdaMan.BreadthFirst
         , ICFPC.LambdaMan.Graph
