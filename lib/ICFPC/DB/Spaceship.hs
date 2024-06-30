@@ -151,7 +151,7 @@ selectBestSolutions = either throwIO pure <=< Session.run do
       SELECT DISTINCT ON (problem)
         problem :: INT4, id :: UUID, commands :: BYTEA,
         route :: UUID?, parent :: UUID?, created_at :: TIMESTAMPTZ
-      FROM spaceship.solutions ORDER BY problem, LENGTH(program) DESC
+      FROM spaceship.solutions ORDER BY problem, LENGTH(commands) DESC
     |]
 
 selectAllSolutions :: Connection -> IO [SpaceshipSolution]
