@@ -145,6 +145,14 @@ reachGreedily p q = case plans p q of
   (t, Range minvx _, Range minvy _) : _ -> (t, SpaceshipVel minvx minvy)
   _ -> error "no plans"
 
+greedyOrder :: Input -> Input
+greedyOrder = Input . go (SpaceshipPos 0 0) . points
+    where dist (SpaceshipPos x y) (SpaceshipPos x' y') = max (abs $ x - x') (abs $ y - y')
+          go _ [] = []
+          go p ps = let closest = minimumBy (comparing $ dist p) ps
+                        rest = traceShow (dist p closest) $ filter (/= closest) ps
+                    in closest : go closest rest
+
 -- visit in order, reach each greedily
 dumbSolution :: Input -> [SpaceshipCommand]
 dumbSolution input = go initState input.points
