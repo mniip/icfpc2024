@@ -37,7 +37,7 @@ selectProblem i = either throwIO pure <=< Session.run do
       SELECT
         number :: INT4, width :: INT4, height :: INT4, walls :: BYTEA[],
         startX :: INT4, startY :: INT4
-      FROM lambdaman_problems WHERE number = $1 :: INT4
+      FROM lambdaman.problems WHERE number = $1 :: INT4
     |]
 
 selectProblems :: Connection -> IO [LambdaManProblem]
@@ -52,7 +52,7 @@ selectProblems = either throwIO pure <=< Session.run do
       SELECT
         number :: INT4, width :: INT4, height :: INT4, walls :: BYTEA[],
         startX :: INT4, startY :: INT4
-      FROM lambdaman_problems
+      FROM lambdaman.problems
     |]
 
 insertProblem :: LambdaManProblem -> Connection -> IO ()
@@ -64,7 +64,7 @@ insertProblem p = either throwIO pure <=< Session.run do
       , fst start, snd start ))
     id
     [resultlessStatement|
-      INSERT INTO lambdaman_problems
+      INSERT INTO lambdaman.problems
         (number, width, height, walls, startX, startY)
       VALUES
         ($1 :: INT4, $2 :: INT4, $3 :: INT4, $4 :: BYTEA[],
@@ -90,7 +90,7 @@ selectSolution u = either throwIO pure <=< Session.run do
       SELECT
         problem :: INT4, id :: UUID, program :: BYTEA,
         parent :: UUID?, created_at :: TIMESTAMPTZ
-      FROM lambdaman_solutions WHERE id = $1 :: UUID
+      FROM lambdaman.solutions WHERE id = $1 :: UUID
     |]
 
 selectSolutions :: ProblemNumber -> Connection -> IO [LambdaManSolution]
@@ -104,7 +104,7 @@ selectSolutions i = either throwIO pure <=< Session.run do
       SELECT
         problem :: INT4, id :: UUID, program :: BYTEA,
         parent :: UUID?, created_at :: TIMESTAMPTZ
-      FROM lambdaman_solutions WHERE problem = $1 :: INT4
+      FROM lambdaman.solutions WHERE problem = $1 :: INT4
     |]
 
 selectBestSolutions :: Connection -> IO [LambdaManSolution]
@@ -118,7 +118,7 @@ selectBestSolutions = either throwIO pure <=< Session.run do
       SELECT DISTINCT ON (problem)
         problem :: INT4, id :: UUID, program :: BYTEA,
         parent :: UUID?, created_at :: TIMESTAMPTZ
-      FROM lambdaman_solutions ORDER BY problem, LENGTH(program) DESC
+      FROM lambdaman.solutions ORDER BY problem, LENGTH(program) DESC
     |]
 
 selectAllSolutions :: Connection -> IO [LambdaManSolution]
@@ -132,7 +132,7 @@ selectAllSolutions = either throwIO pure <=< Session.run do
       SELECT
         problem :: INT4, id :: UUID, program :: BYTEA,
         parent :: UUID?, created_at :: TIMESTAMPTZ
-      FROM lambdaman_solutions
+      FROM lambdaman.solutions
     |]
 
 data LambdaManSolutionInsert = LambdaManSolutionInsert
@@ -148,7 +148,7 @@ insertSolution s = either throwIO pure <=< Session.run do
       -> (unProblemNumber problem, program, fmap unSolutionID parent))
     SolutionID
     [singletonStatement|
-      INSERT INTO lambdaman_solutions (problem, program, parent)
+      INSERT INTO lambdaman.solutions (problem, program, parent)
       VALUES ($1 :: INT4, $2 :: BYTEA, $3 :: UUID?)
       RETURNING id :: UUID
     |]
