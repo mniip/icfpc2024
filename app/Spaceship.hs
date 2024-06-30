@@ -62,4 +62,4 @@ main = do
         -- solution = solve goals'
         solution = dumbSolution (Input $ map (\(x, y) -> SpaceshipPos x y) goals')
     -- traceShow (length solution) (putStrLn solution)
-    putStrLn $ map formatNumpad solution
+    BS.putStr $ formatManoeuvres solution

@@ -141,6 +141,27 @@ executable anneal-route
           bytestring
         , random
         , primitive
+        , integer-logarithms
+
+executable greedy-route
+    import: executables
+    main-is: GreedyRoute.hs
+    build-depends:
+          bytestring
+
+executable anneal-micro
+    import: executables
+    main-is: AnnealMicro.hs
+    build-depends:
+          bytestring
+        , random
+        , primitive
+
+executable manoeuvre
+    import: executables
+    main-is: Manoeuvre.hs
+    build-depends:
+          bytestring
 
 library
     import: common

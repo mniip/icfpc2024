@@ -69,7 +69,7 @@ dumbSolution input = go initState input.points
           { x = s.vel.x + sum asx
           , y = s.vel.y + sum asy
           }
-      in zipWith SpaceshipCommand asx asy ++ go (SpaceshipState p v) ps
+      in (t, v) : go (SpaceshipState p v) ps
     go _ [] = []
 
 -- go for closest according to heuristic
