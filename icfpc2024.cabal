@@ -75,8 +75,7 @@ executable lambdaman-manual
     import: executables
     main-is: LambdaManManual.hs
     build-depends:
-          array
-        , bytestring
+          bytestring
 
 executable lambdaman-greedy
     import: executables
@@ -100,7 +99,9 @@ executable lambdaman-vis
 executable spaceship
     import: executables
     main-is: Spaceship.hs
-    build-depends: array, random
+    build-depends:
+           array
+        ,  random
 
 executable spaceship-dumb
     import: executables
@@ -122,9 +123,7 @@ library
         , aeson
         , attoparsec
         , bytestring
-        , contravariant
         , containers
-        , ghc-heap
         , safe-exceptions
         , file-embed
         , hashable

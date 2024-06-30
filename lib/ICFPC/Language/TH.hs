@@ -1,7 +1,6 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 module ICFPC.Language.TH where
 
-import Data.ByteString.Char8 qualified as BS8
 import Data.List
 import Data.Map (Map)
 import Data.Map.Strict qualified as M
@@ -13,10 +12,6 @@ import ICFPC.Language
 import Language.Haskell.TH
 import Language.Haskell.TH.Syntax (Lift(..))
 import Numeric.Natural
-import GHC.Exts.Heap
-import GHC.Num
-import System.IO.Unsafe
-import Unsafe.Coerce
 
 
 deriving stock instance Lift ICFPText
@@ -116,70 +111,3 @@ fromHaskell ex = snd (go ex) mempty
             (Lambda unused $ kb (M.insert name unused names))
             (kt names)
     goLet (d:_) _ = error $ "Unsupported Dec: " <> show d
-
-class PolymorphicEq a b where
-  polymorphicEq :: a -> b -> Bool
-
-instance {-# OVERLAPPABLE #-} PolymorphicEq a b where
-  polymorphicEq :: a -> b -> Bool
-  polymorphicEq !x !y = unsafePerformIO do
-    getBoxedClosureData (asBox x) >>= \case
-      ConstrClosure{name = "IS"}
-        -> pure $! integerEq (unsafeCoerce x) (unsafeCoerce y)
-      ConstrClosure{name} -> error name
-      _ -> error "polymorphicEq"
-
-instance {-# INCOHERENT #-} PolymorphicEq Integer Integer where
-  {-# INLINE polymorphicEq #-}
-  polymorphicEq = integerEq
-
-instance {-# INCOHERENT #-} PolymorphicEq Integer b where
-  {-# INLINE polymorphicEq #-}
-  polymorphicEq x y = integerEq x (unsafeCoerce y)
-
-instance {-# INCOHERENT #-} PolymorphicEq a Integer where
-  {-# INLINE polymorphicEq #-}
-  polymorphicEq x y = integerEq (unsafeCoerce x) y
-
-toHaskell :: Expr -> Q Exp
-toHaskell = \case
-  EBool False -> conE 'False
-  EBool True -> conE 'True
-  EInt x -> sigE (litE $ integerL x) (conT ''Integer)
-  EString x -> litE $ stringL $ BS8.unpack $ icfpToByteString x
-  Unary Not x -> appE (varE 'not) (toHaskell x)
-  Unary Neg x -> appE (varE 'negate) (toHaskell x)
-  Unary Int2Str x -> appE (varE 'icfpFromInt) (toHaskell x)
-  Unary Str2Int x -> appE (varE 'icfpToInt) (toHaskell x)
-  Binary Add x y
-    -> infixE (Just $ toHaskell x) (varE 'integerAdd) (Just $ toHaskell y)
-  Binary Subtract x y
-    -> infixE (Just $ toHaskell x) (varE 'integerSub) (Just $ toHaskell y)
-  Binary Multiply x y
-    -> infixE (Just $ toHaskell x) (varE 'integerMul) (Just $ toHaskell y)
-  Binary Divide x y
-    -> infixE (Just $ toHaskell x) (varE 'quot) (Just $ toHaskell y)
-  Binary Modulo x y
-    -> infixE (Just $ toHaskell x) (varE 'integerRem) (Just $ toHaskell y)
-  Binary Less x y
-    -> infixE (Just $ toHaskell x) (varE 'integerLt) (Just $ toHaskell y)
-  Binary Greater x y
-    -> infixE (Just $ toHaskell x) (varE 'integerGt) (Just $ toHaskell y)
-  Binary Equal x y
-    -> infixE (Just $ toHaskell x) (varE 'polymorphicEq) (Just $ toHaskell y)
-  Binary Or x y
-    -> infixE (Just $ toHaskell x) (varE '(||)) (Just $ toHaskell y)
-  Binary And x y
-    -> infixE (Just $ toHaskell x) (varE '(&&)) (Just $ toHaskell y)
-  Binary Concat x y
-    -> infixE (Just $ toHaskell x) (varE 'BS8.append) (Just $ toHaskell y)
-  Binary Take x y
-    -> varE 'BS8.take `appE` toHaskell x `appE` toHaskell y
-  Binary Drop x y
-    -> varE 'BS8.drop `appE` toHaskell x `appE` toHaskell y
-  If x y z
-    -> condE (toHaskell x) (toHaskell y) (toHaskell z)
-  Binary Apply x y
-    -> appE (toHaskell x) (toHaskell y)
-  Lambda n x -> lamE [varP $ mkName $ "x" <> show n] (toHaskell x)
-  Var n -> varE 'unsafeCoerce `appE` varE (mkName $ "x" <> show n)
