@@ -35,6 +35,28 @@ manoeuvreTimes (x0, vx0) (x1, vx1) = case
     !dx = x1 - x0
     !dv = vx1 - vx0
 
+-- [t1, t2] U [t3, +inf]
+manoeuvreTimesNoSpeed :: (X, VX) -> X -> (Maybe (T, T), T)
+manoeuvreTimesNoSpeed (x0, vx0) x1 = case
+    ( integerQuadraticInequality 1 (1 + 2*vx0) (-2*dx)
+    , integerQuadraticInequality 1 (1 - 2*vx0) ( 2*dx)
+    )
+  of
+    (NotFromTo negT1 t1, NotFromTo t2 t3)
+      | negT1 < 0, t1 <= t2 -> (Just (t1, t2), t3)
+      | negT1 < 0, t1 > t2 -> (Nothing, max 0 $ max t1 t3)
+    (NotFromTo negT1 t3, Always)
+      | negT1 < 0 -> (Nothing, max 0 t3)
+    (NotFromTo t2 t3, NotFromTo negT1 t1)
+      | negT1 < 0, t1 <= t2 -> (Just (t1, t2), t3)
+      | negT1 < 0, t1 > t2 -> (Nothing, max 0 $ max t1 t3)
+    (Always, NotFromTo negT1 t3)
+      | negT1 < 0 -> (Nothing, max 0 t3)
+    (Always, Always) -> (Nothing, 0)
+    p -> error $ "manoeuvreTimes: " <> show p
+  where
+    !dx = x1 - x0
+
 data WeakIQISolution
   = FromTo !Int !Int -- [x, y]
   | NotFromTo !Int !Int -- (-inf, x] U [y, +inf)
