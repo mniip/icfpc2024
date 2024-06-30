@@ -118,7 +118,7 @@ selectBestSolutions = either throwIO pure <=< Session.run do
       SELECT DISTINCT ON (problem)
         problem :: INT4, id :: UUID, program :: BYTEA,
         parent :: UUID?, created_at :: TIMESTAMPTZ
-      FROM lambdaman_solutions ORDER BY problem_id, score DESC
+      FROM lambdaman_solutions ORDER BY problem, LENGTH(program) DESC
     |]
 
 selectAllSolutions :: Connection -> IO [LambdaManSolution]
