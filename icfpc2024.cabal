@@ -115,10 +115,6 @@ executable 3d-sim
     main-is: ThreeD.hs
     build-depends: containers
 
-executable efficiency
-    import: executables
-    main-is: Efficiency.hs
-
 library
     import: common
     build-depends:
