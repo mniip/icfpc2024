@@ -1,7 +1,10 @@
+import Control.Monad
 import Control.Monad.ST
 import Data.ByteString qualified as BS
+import Data.Foldable
 import Data.List
 import Data.Primitive
+import Data.Traversable
 import ICFPC.Spaceship
 import System.Environment
 import System.Random
@@ -23,13 +26,15 @@ reverseRange a !i !j
 
 annealing
   :: Int
+  -> Int
   -> StdGen
   -> MutablePrimArray s Int
   -> MutablePrimArray s Int
   -> ST s ()
-annealing plannedSteps g0 mxs mys = do
+annealing plannedSteps plannedScore g0 mxs mys = do
   gen <- newSTGenM g0
   size <- getSizeofMutablePrimArray mxs
+
   let
     scoreForOrigin i = do
       x <- readPrimArray mxs i
@@ -43,20 +48,40 @@ annealing plannedSteps g0 mxs mys = do
       y2 <- readPrimArray mys j
       pure $ max (abs $ x2 - x1) (abs $ y2 - y1)
 
-    scoreAll = foldl'
-      (\ !tot !i -> liftA2 (+) tot $ scoreForIndexPair i (i + 1))
-      (scoreForOrigin 0)
-      [0 .. size - 2]
+  -- for each vertex, sum of scores of its two incident edges
+  weights <- newPrimArray size
+  initScore <- sum <$> for [0 .. size - 1] \i -> do
+    edgeL <- if i == 0
+      then scoreForOrigin i
+      else scoreForIndexPair (i - 1) i
+    edgeR <- if i == size - 1
+      then pure 0
+      else scoreForIndexPair i (i + 1)
+    writePrimArray weights i (edgeL + edgeR)
+    pure edgeL
 
-  initScore <- scoreAll
   let
     temperature !step = max 0
       $ 1 - fromIntegral step / fromIntegral plannedSteps :: Double
 
-    go !step !score = do
+    randomPair = do
+      totWeight <- sum <$> for [0 .. size - 1] do readPrimArray weights
+      iW <- uniformRM (0, totWeight - 1) gen
+      jW <- uniformRM (0, totWeight - 1) gen
+      i <- bucket 0 iW
+      j <- bucket 0 jW
+      case compare i j of
+        LT -> pure (i, j)
+        EQ -> randomPair
+        GT -> pure (j, i)
+      where
+        bucket !i !s = readPrimArray weights i >>= \w -> if s < w then pure i
+          else bucket (i + 1) (s - w)
+
+    loop !step !score = do
       u01 <- uniformDouble01M gen
-      i <- uniformRM (0, size - 2) gen
-      j <- uniformRM (i + 1, size - 1) gen
+
+      (i, j) <- randomPair
 
       delIedge <- if i == 0
         then negate <$> scoreForOrigin i
@@ -73,30 +98,44 @@ annealing plannedSteps g0 mxs mys = do
       let
         scoreDiff = delIedge + delJedge + addIedge + addJedge
         prob = exp $ negate (fromIntegral scoreDiff)
-          / (temperature step * fromIntegral initScore)
+          / (temperature step * fromIntegral plannedScore)
 
       score' <- if prob > u01
         then do
           reverseRange mxs i j
           reverseRange mys i j
+
+          readPrimArray weights i >>= writePrimArray weights i
+            . (+ (addIedge + delIedge))
+          readPrimArray weights j >>= writePrimArray weights j
+            . (+ (addJedge + delJedge))
+          unless (i == 0) do
+            readPrimArray weights (i - 1) >>= writePrimArray weights (i - 1)
+              . (+ (addJedge + delIedge))
+          unless (j == size - 1) do
+            readPrimArray weights (j + 1) >>= writePrimArray weights (j + 1)
+              . (+ (addIedge + delJedge))
+
+          reverseRange weights i j
+
           pure $ score + scoreDiff
         else pure score
       if scoreDiff < 0 || temperature step /= 0
-      then go (step + 1) score'
+      then loop (step + 1) score'
       else do
         traceM $ show initScore <> " -> " <> show score
 
-  go (0 :: Int) initScore
+  loop (0 :: Int) initScore
 
-keepRestarting :: Int -> FilePath -> StdGen -> Input -> IO ()
-keepRestarting steps filename g input = do
+keepRestarting :: Int -> Int -> FilePath -> StdGen -> Input -> IO ()
+keepRestarting steps score filename g input = do
   input' <- stToIO do
     let
       xs = primArrayFromList $ (.x) <$> input.points
       ys = primArrayFromList $ (.y) <$> input.points
     mxs <- unsafeThawPrimArray xs
     mys <- unsafeThawPrimArray ys
-    annealing steps g mxs mys
+    annealing steps score g mxs mys
 
     size <- getSizeofMutablePrimArray mxs
     xs' <- freezePrimArray mxs 0 size
@@ -106,13 +145,13 @@ keepRestarting steps filename g input = do
         (primArrayToList xs') (primArrayToList ys')
       }
   BS.writeFile (filename <> ".ann") $ formatInput input'
-  keepRestarting steps filename g input'
+  keepRestarting steps score filename g input'
 
 main :: IO ()
 main = getArgs >>= \case
-  [readMaybe -> Just steps, filename] -> do
+  [readMaybe -> Just steps, readMaybe -> Just score, filename] -> do
     input <- parseInput <$> BS.readFile filename
     g <- getStdGen
-    keepRestarting steps filename g input
+    keepRestarting steps score filename g input
 
-  _ -> error "Usage: anneal <steps> <problem>"
+  _ -> error "Usage: anneal <steps> <score> <problem>"
