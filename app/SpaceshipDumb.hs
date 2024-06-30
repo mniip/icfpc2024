@@ -4,4 +4,4 @@ import ICFPC.Spaceship
 main :: IO ()
 main = do
   input <- BS.getContents
-  putStrLn $ formatNumpad <$> dumbSolution (parseInput input)
+  putStrLn $ formatNumpad <$> dumbSolution (greedyOrder $ parseInput input)

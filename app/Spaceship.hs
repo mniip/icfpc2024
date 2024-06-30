@@ -4,6 +4,8 @@ import Data.List (nub, (\\), sort, minimumBy)
 import Debug.Trace
 import System.Random
 
+import ICFPC.Spaceship
+
 intRoot :: Int -> Int
 intRoot 0 = 0
 intRoot 1 = 1
@@ -45,6 +47,10 @@ score :: Trip -> Int
 score arr = sum [dist (arr A.! (i-1)) (arr A.! i) | i <- [low+1..up]]
     where (low, up) = A.bounds arr
 
+maxdist :: Trip -> Int
+maxdist arr = maximum [dist (arr A.! (i-1)) (arr A.! i) | i <- [low+1..up]]
+    where (low, up) = A.bounds arr
+
 -- Generate a random pair of distinct integers (up to a bound)
 randomPair :: Int -> StdGen -> ((Int, Int), StdGen)
 randomPair b g = let (x, g') = uniformR (1, b) g
@@ -63,13 +69,14 @@ annealing gen points = A.elems $ go 1.0 gen cost0 sol0
                                        (u01, g'') = uniformR (0, 1) g'
                                        sol' = sol A.// [(i, sol A.! j), (j, sol A.! i)]
                                        diff s k = if k < len then dist (s A.! (k-1)) (s A.! k) + dist (s A.! (k+1)) (s A.! k) else dist (s A.! (k-1)) (s A.! k)
-                                       cost' = cost - (diff sol i) - (diff sol j) + (diff sol' i) + (diff sol' j)
+                                       cost' = cost - (diff sol i) - (diff sol j) + (diff sol' i) + (diff sol' j) +
+                                           (if i+1 == j || i == j+1 then dist (sol A.! i) (sol A.! j) - dist (sol' A.! i) (sol' A.! j) else 0) -- Special case when i and j are adjacent
                                    in if cost' < cost then iter (n+1) temp g' cost' sol'
                                       else if exp ((fromIntegral $ cost - cost') / ((fromIntegral cost0)*temp)) > u01 then iter (n-1) temp g'' cost' sol' else iter (n-1) temp g'' cost sol
           go :: Float -> StdGen -> Int -> Trip -> Trip
-          go temp g cost sol = let (sol', g') = iter 10000 temp g cost sol
+          go temp g cost sol = let (sol', g') = iter 1000 temp g cost sol
                                    cost' = traceShowId $ score sol'
-                               in if cost' /= cost then go (0.99*temp) g' cost' sol' else traceShow cost sol
+                               in if cost' /= cost then go (0.9*temp) g' cost' sol' else traceShow cost sol
 
 solve :: [(Int, Int)] -> String
 solve goals = go (0, 0) (filter (/= (0, 0)) goals)
@@ -85,6 +92,8 @@ main = do
     file <- getContents
     gen <- initStdGen
     let goals = map ((\[a, b] -> (read a, read b)) . words) $ lines file
-        goals' = annealing gen goals -- Unused
-        solution = solve goals
-    traceShow (length solution) (putStrLn solution)
+        goals' = annealing gen goals
+        -- solution = solve goals'
+        solution = dumbSolution (Input $ map (\(x, y) -> SpaceshipPos x y) goals')
+    -- traceShow (length solution) (putStrLn solution)
+    putStrLn $ map formatNumpad solution
