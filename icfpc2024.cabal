@@ -127,6 +127,12 @@ executable compress
     build-depends:
           bytestring
 
+executable spaceship-sim
+    import: executables
+    main-is: SpaceshipSim.hs
+    build-depends:
+          bytestring
+
 library
     import: common
     build-depends:

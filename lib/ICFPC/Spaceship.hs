@@ -62,3 +62,16 @@ formatNumpad = \case
   SpaceshipCommand 0 1 -> '8'
   SpaceshipCommand 1 1 -> '9'
   p -> error $ "formatNumpad: " <> show p
+
+parseNumpad :: Char -> SpaceshipCommand
+parseNumpad = \case
+  '1' -> SpaceshipCommand (-1) (-1)
+  '2' -> SpaceshipCommand 0 (-1)
+  '3' -> SpaceshipCommand 1 (-1)
+  '4' -> SpaceshipCommand (-1) 0
+  '5' -> SpaceshipCommand 0 0
+  '6' -> SpaceshipCommand 1 0
+  '7' -> SpaceshipCommand (-1) 1
+  '8' -> SpaceshipCommand 0 1
+  '9' -> SpaceshipCommand 1 1
+  p -> error $ "parseNumpad: " <> show p

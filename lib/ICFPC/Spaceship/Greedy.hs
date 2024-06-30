@@ -62,33 +62,5 @@ greedySolution input = pick initState input.points
 
     pick _ [] = []
     pick st points = let
-        p = minimumBy (comparing $ heuristic st) points
+        p = minimumBy (comparing $ fastestPlanAnySpeed st) points
       in go st p (delete p points)
-
-    heuristic s p = mergeWith max
-      (mergeWith min
-        (timeEstimate s.pos.x s.vel.x p.x 1)
-        (timeEstimate s.pos.x s.vel.x p.x (-1)))
-      (mergeWith min
-        (timeEstimate s.pos.y s.vel.y p.y 1)
-        (timeEstimate s.pos.y s.vel.y p.y (-1)))
-
-    mergeWith f (Just x) (Just y) = Just (f x y)
-    mergeWith _ p q = p <|> q
-
-    timeEstimate x0 v0 x1 a = twicePositiveRoot
-      (a / 2)
-      (fromIntegral v0 + a / 2)
-      (fromIntegral (x0 - x1))
-
-    twicePositiveRoot a b c
-      | d >= 0
-      , p >= 0 = Just p
-      | d >= 0
-      , q >= 0 = Just q
-      | otherwise = Nothing
-      where
-        d :: Double
-        d = b * b - 4 * a * c
-        p = -b - sqrt d
-        q = -b + sqrt d
