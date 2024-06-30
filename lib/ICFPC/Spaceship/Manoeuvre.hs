@@ -35,9 +35,16 @@ manoeuvreTimes (x0, vx0) (x1, vx1) = case
     !dx = x1 - x0
     !dv = vx1 - vx0
 
+isManoeuvrePossibleAnySpeed :: (X, VX) -> X -> T -> Bool
+isManoeuvrePossibleAnySpeed (x0, vx0) x1 t =
+  t*t + t + 2*vx0*t - 2*dx >= 0 &&
+  t*t + t - 2*vx0*t + 2*dx >= 0
+  where
+    !dx = x1 - x0
+
 -- [t1, t2] U [t3, +inf]
-manoeuvreTimesNoSpeed :: (X, VX) -> X -> (Maybe (T, T), T)
-manoeuvreTimesNoSpeed (x0, vx0) x1 = case
+manoeuvreTimesAnySpeed :: (X, VX) -> X -> (Maybe (T, T), T)
+manoeuvreTimesAnySpeed (x0, vx0) x1 = case
     ( integerQuadraticInequality 1 (1 + 2*vx0) (-2*dx)
     , integerQuadraticInequality 1 (1 - 2*vx0) ( 2*dx)
     )
@@ -56,6 +63,34 @@ manoeuvreTimesNoSpeed (x0, vx0) x1 = case
     p -> error $ "manoeuvreTimes: " <> show p
   where
     !dx = x1 - x0
+
+buildPossibleManoeuvre :: (X, VX) -> (X, VX) -> T -> [AX]
+buildPossibleManoeuvre (!x0, !vx0) !q !t
+  | t == 0 = if q == (x0, vx0) then []
+    else error "Impossible manoeuver"
+  | p' <- (x0 + vx0 + 1, vx0 + 1)
+  , isManoeuvrePossible p' q (t - 1)
+  = 1 : buildPossibleManoeuvre p' q (t - 1)
+  | p' <- (x0 + vx0 - 1, vx0 - 1)
+  , isManoeuvrePossible p' q (t - 1)
+  = (-1) : buildPossibleManoeuvre p' q (t - 1)
+  | otherwise
+  = 0 : buildPossibleManoeuvre (x0 + vx0, vx0) q (t - 1)
+
+
+buildPossibleManoeuvreAnySpeed :: (X, VX) -> X -> T -> [AX]
+buildPossibleManoeuvreAnySpeed (!x0, !vx0) !q !t
+  | t == 0 = if x0 == q then []
+    else error "Impossible manoeuvre"
+  | p' <- (x0 + vx0 + 1, vx0 + 1)
+  , isManoeuvrePossibleAnySpeed p' q (t - 1)
+  = 1 : buildPossibleManoeuvreAnySpeed p' q (t - 1)
+  | p' <- (x0 + vx0 - 1, vx0 - 1)
+  , isManoeuvrePossibleAnySpeed p' q (t - 1)
+  = (-1) : buildPossibleManoeuvreAnySpeed p' q (t - 1)
+  | otherwise
+  = 0 : buildPossibleManoeuvreAnySpeed (x0 + vx0, vx0) q (t - 1)
+
 
 data WeakIQISolution
   = FromTo !Int !Int -- [x, y]
