@@ -1,6 +1,5 @@
 module ICFPC.Spaceship.Greedy where
 
-import Control.Applicative
 import Data.List
 import Data.Ord
 import ICFPC.Spaceship

@@ -133,6 +133,14 @@ executable spaceship-sim
     build-depends:
           bytestring
 
+executable anneal-route
+    import: executables
+    main-is: AnnealRoute.hs
+    build-depends:
+          bytestring
+        , random
+        , primitive
+
 library
     import: common
     build-depends:

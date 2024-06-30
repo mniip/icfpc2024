@@ -2,6 +2,8 @@ module ICFPC.Spaceship where
 
 import Data.Attoparsec.ByteString.Char8 qualified as Attoparsec
 import Data.ByteString (ByteString)
+import Data.ByteString.Builder qualified as B
+import Data.ByteString.Lazy qualified as BSL
 
 newtype Input = Input
   { points :: [SpaceshipPos]
@@ -49,6 +51,11 @@ parseInput = either error id . Attoparsec.parseOnly do
     pure SpaceshipPos{x, y}
   Attoparsec.endOfInput
   pure Input{..}
+
+formatInput :: Input -> ByteString
+formatInput input = BSL.toStrict $ B.toLazyByteString
+  $ flip foldMap input.points \SpaceshipPos{x, y} ->
+    B.intDec x <> B.char8 ' ' <> B.intDec y <> B.char8 '\n'
 
 formatNumpad :: SpaceshipCommand -> Char
 formatNumpad = \case

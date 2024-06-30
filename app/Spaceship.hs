@@ -1,6 +1,5 @@
 import qualified Data.Array as A
-import Data.Function (on)
-import Data.List (nub, (\\), sort, minimumBy)
+import Data.List
 import Debug.Trace
 import System.Random
 
@@ -14,29 +13,6 @@ intRoot d = root 1
     where root i | d >= i*i && (i+1)*(i+1) > d = i
                  | otherwise = root (i+1)
 
-fancyPlan :: Int -> [Int]
-fancyPlan 0 = []
-fancyPlan 1 = [1, -1]
-fancyPlan d = replicate n 1 ++ replicate (n-1) (-1) ++ replicate (d - n*n) 0 ++ [-1]
-    where n = root 1
-          root i | d >= i*i && (i+1)*(i+1) > d = i
-                 | otherwise = root (i+1)
-
--- Land with zero velocity on the target
-fromTo :: Int -> Int -> [Int]
-fromTo a b | a == b = []
-           | a < b = fancyPlan (b-a) -- [1] ++ (replicate (b-a-1) 0) ++ [-1]
-           | a > b = reverse (fromTo b a)
-
--- Combine two trajectories
-combine :: (Int, Int) -> (Int, Int) -> [(Int, Int)]
-combine (x, y) (x', y') = if length mx < length my then zip (mx ++ cycle [0]) my else zip mx (my ++ cycle [0])
-    where mx = fromTo x x'
-          my = fromTo y y'
-
-toNumpad :: (Int, Int) -> Char
-toNumpad c = head . show . fst . head . filter (\(_, c') -> c == c') $ zip [1..] [(y, x) | x <- [-1..1], y <- [-1..1]]
-
 dist :: (Int, Int) -> (Int, Int) -> Int
 dist (a, b) (c, d) = max (foo $ abs (a-c)) (foo $ abs (b-d))
     where foo i = let n = intRoot i
@@ -46,10 +22,6 @@ type Trip = A.Array Int (Int, Int)
 
 score :: Trip -> Int
 score arr = sum [dist (arr A.! (i-1)) (arr A.! i) | i <- [low+1..up]]
-    where (low, up) = A.bounds arr
-
-maxdist :: Trip -> Int
-maxdist arr = maximum [dist (arr A.! (i-1)) (arr A.! i) | i <- [low+1..up]]
     where (low, up) = A.bounds arr
 
 -- Generate a random pair of distinct integers (up to a bound)
@@ -79,16 +51,8 @@ annealing gen points = A.elems $ go 1.0 gen cost0 sol0
                                    cost' = traceShowId $ score sol'
                                in if cost' /= cost then go (0.9*temp) g' cost' sol' else traceShow cost sol
 
-solve :: [(Int, Int)] -> String
-solve goals = go (0, 0) (filter (/= (0, 0)) goals)
-    where go _ [] = []
-          go coord gs = let g = minimumBy (compare `on` (dist coord)) gs
-                            rest = filter (/= g) gs
-                            thrust = combine coord g
-                            (a, b) .+. (c, d) = (a+c, b+d)
-                            visited = scanl1 (.+.) $ scanl (.+.) coord thrust
-                        in map toNumpad thrust ++ go g (rest \\ visited)
 
+main :: IO ()
 main = do
     file <- getContents
     gen <- initStdGen
