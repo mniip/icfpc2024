@@ -5,8 +5,8 @@ import Data.List.NonEmpty (NonEmpty(..))
 import Data.List.NonEmpty qualified as NE
 import Data.Monoid
 import ICFPC.Language
-import Numeric.Natural
 import Numeric
+import Numeric.Natural
 
 
 type Prec = Int

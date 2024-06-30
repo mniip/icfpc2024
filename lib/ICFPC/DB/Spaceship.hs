@@ -5,16 +5,16 @@ import Control.Monad
 import Data.ByteString (ByteString)
 import Data.Foldable
 import Data.Int
+import Data.Primitive
 import Data.Profunctor
 import Data.Time
-import Data.Primitive
+import Data.UUID
 import Data.Vector qualified as V
 import GHC.Generics
 import Hasql.Connection
 import Hasql.Session qualified as Session
 import Hasql.TH
 import ICFPC.DB
-import Data.UUID
 
 
 data SpaceshipProblem = SpaceshipProblem

@@ -1,5 +1,5 @@
-import qualified Data.Map as M
 import Data.List (nub, group)
+import qualified Data.Map as M
 import System.Environment
 
 data Cell = Num Integer
@@ -102,7 +102,7 @@ checkTimeTravel grid = if null warpRequests then Nothing
 usualStep :: Grid -> Grid
 usualStep grid = if length writePoss /= length (nub writePoss)
                  then error "Writing in the same cell"
-                 else case filter (\(p, _) -> M.lookup p grid  == Just Result) writeReqs of 
+                 else case filter (\(p, _) -> M.lookup p grid  == Just Result) writeReqs of
                            ((_, res):_) -> error $ "Result: " ++ show res
                            _ -> foldr (uncurry M.insert) (foldr M.delete grid takeReqs) writeReqs
     where ks = M.keys grid
@@ -112,7 +112,7 @@ usualStep grid = if length writePoss /= length (nub writePoss)
           writePoss = map fst writeReqs
           -- For each operator returns positions which must be cleared, and positions which must be written to
           readyOp (x, y) = case (M.lookup (x, y) grid, M.lookup (x-1, y) grid, M.lookup (x+1, y) grid, M.lookup (x, y-1) grid, M.lookup (x, y+1) grid) of
-                                (Just Lefty, _, Just v, _, _) -> ([(x+1, y)], [((x-1, y), v)]) 
+                                (Just Lefty, _, Just v, _, _) -> ([(x+1, y)], [((x-1, y), v)])
                                 (Just Righty, Just v, _, _, _) -> ([(x-1, y)], [((x+1, y), v)])
                                 (Just Top, _, _, _, Just v) -> ([(x, y+1)], [((x, y-1), v)])
                                 (Just Bottom, _, _, Just v, _) -> ([(x, y-1)], [((x, y+1), v)])

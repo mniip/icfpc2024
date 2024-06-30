@@ -1,8 +1,8 @@
-import Data.List (nub, (\\), sort, minimumBy)
-import Data.Function (on)
-import System.Random
 import qualified Data.Array as A
+import Data.Function (on)
+import Data.List (nub, (\\), sort, minimumBy)
 import Debug.Trace
+import System.Random
 
 intRoot :: Int -> Int
 intRoot 0 = 0

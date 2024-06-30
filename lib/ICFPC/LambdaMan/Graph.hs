@@ -1,8 +1,8 @@
 module ICFPC.LambdaMan.Graph where
 
 import Control.Monad
-import Control.Monad.Writer
 import Control.Monad.State
+import Control.Monad.Writer
 import Data.Bifunctor
 import Data.Foldable
 import Data.IntMap.Strict qualified as IM

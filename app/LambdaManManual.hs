@@ -1,9 +1,8 @@
-
 import Data.ByteString.Char8 qualified as BS8
 import Data.Char
+import ICFPC.LambdaMan
 import System.Environment
 import System.IO
-import ICFPC.LambdaMan
 
 
 data Game = Game

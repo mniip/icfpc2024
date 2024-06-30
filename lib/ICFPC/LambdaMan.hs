@@ -6,8 +6,8 @@ import Data.ByteString (ByteString)
 import Data.ByteString.Builder qualified as B
 import Data.ByteString.Char8 qualified as BS8
 import Data.ByteString.Lazy qualified as BSL
-import Data.Hashable
 import Data.Foldable
+import Data.Hashable
 import Data.IntMap (IntMap)
 import Data.IntMap qualified as IM
 import Data.IntSet (IntSet)

@@ -8,9 +8,9 @@ import Data.ByteString.Builder (Builder)
 import Data.ByteString.Builder qualified as B
 import Data.ByteString.Char8 qualified as BS8
 import Data.ByteString.Lazy qualified as BSL
-import Data.Primitive.PrimArray
 import Data.Functor
 import Data.List
+import Data.Primitive.PrimArray
 import Data.String
 import Data.Word
 import Numeric.Natural
