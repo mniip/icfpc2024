@@ -152,6 +152,7 @@ library
         , ICFPC.API
         , ICFPC.DB
         , ICFPC.DB.LambdaMan
+        , ICFPC.DB.Spaceship
         , ICFPC.Dijkstra
         , ICFPC.Language
         , ICFPC.Language.Combinators
