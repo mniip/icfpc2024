@@ -87,7 +87,7 @@ prettyExpr settings = ($ "") . go 0
       Binary Equal x y -> showParen (prec > 6)
         $ go 6 x . showString " == " . go 7 y
       Binary Concat x y -> showParen (prec > 6)
-        $ go 7 x . showString " <> " . go 7 y
+        $ go 7 x . showString " <> " . go 6 y
       Binary Take x y -> showParen (prec > 10)
         $ showString "take " <> go 11 x . showString " " . go 11 y
       Binary Drop x y -> showParen (prec > 10)

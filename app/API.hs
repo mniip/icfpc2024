@@ -53,6 +53,12 @@ sendRaw input = do
     $ EString $ icfpFromByteString input
   print $ decodeExpr output
 
+sendProgram :: FilePath -> IO ()
+sendProgram filename = do
+  input <- BS.readFile filename
+  output <- api.postCommunicate input
+  printEvalResult $ decodeExpr output
+
 options :: ParserInfo (IO ())
 options = info
   do
@@ -72,6 +78,9 @@ options = info
       , command "sendraw" $ info
         (sendRaw <$> strArgument (metavar "string"))
         (progDesc "Send argument as string but don't evaluate result")
+      , command "sendprogram" $ info
+        (sendProgram <$> strArgument (metavar "file"))
+        (progDesc "Send file as raw program and evaluate result")
       ]
   mempty
 

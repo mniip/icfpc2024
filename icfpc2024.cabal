@@ -114,11 +114,18 @@ executable spaceship-greedy
     main-is: SpaceshipGreedy.hs
     build-depends:
           bytestring
+        , containers
 
 executable 3d-sim
     import: executables
     main-is: ThreeD.hs
     build-depends: containers
+
+executable compress
+    import: executables
+    main-is: Compress.hs
+    build-depends:
+          bytestring
 
 library
     import: common
@@ -144,6 +151,7 @@ library
         , servant-client
         , template-haskell
         , text
+        , these
         , time
         , uuid
         , unordered-containers

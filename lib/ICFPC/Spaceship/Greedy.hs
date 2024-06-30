@@ -30,6 +30,7 @@ greedyOrder = Input . go (SpaceshipPos 0 0) . points
                         rest = traceShow (dist p closest) $ filter (/= closest) ps
                     in closest : go closest rest
 
+
 -- visit in order, reach each greedily
 dumbSolution :: Input -> [SpaceshipCommand]
 dumbSolution input = go initState input.points
@@ -49,7 +50,6 @@ dumbSolution input = go initState input.points
 greedySolution :: Input -> [SpaceshipCommand]
 greedySolution input = pick initState input.points
   where
-    go _ q _ | trace ("Picked " <> show q) False = undefined
     go !s !p ps = let
         !t = fastestPlanAnySpeed s p
         asx = buildPossibleManoeuvreAnySpeed (s.pos.x, s.vel.x) p.x t
