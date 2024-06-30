@@ -81,14 +81,17 @@ separateByteString x !pat !bs
 
 data Ptr = Ptr !Int !Int {-# UNPACK #-} !ByteString
 
-allInfixes :: [ByteString] -> [(ByteString, Int)]
+allInfixes :: [ByteString] -> [(ByteString, Int, Int)]
 allInfixes bss0 = foldMap (go 1) (NE.nonEmpty $ part 0 $ mkPtrs bss0)
   where
-    go :: Int -> NonEmpty (NonEmpty Ptr) -> [(ByteString, Int)]
-    go !i groups = (toList groups <&> \g -> (takePtr i $ NE.head g, length g))
+    go !i groups = (toList groups <&> \g ->
+        ( takePtr i $ NE.head g
+        , length g
+        , consecutivePtrs i g
+        ))
       ++ foldMap (go (i + 1)) (NE.nonEmpty $ toList groups >>= part i)
 
-    part i grp = mapMaybe (large . removeOverlaps . toList) $ M.elems
+    part i grp = mapMaybe (large . removeOverlaps . reverse . toList) $ M.elems
       $ M.fromListWith (<>)
         [ (c, NE.singleton p)
         | p <- toList grp
@@ -98,9 +101,9 @@ allInfixes bss0 = foldMap (go 1) (NE.nonEmpty $ part 0 $ mkPtrs bss0)
         removeOverlaps [] = []
         removeOverlaps (x:xs) = x : walk x xs
           where
-            walk (Ptr k j _) (q@(Ptr k' j' _) : ys)
+            walk p@(Ptr k j _) (q@(Ptr k' j' _) : ys)
               | k /= k' = q : walk q ys
-              | max j j' < min j j' + i = walk q ys
+              | j' < j + i = walk p ys
               | otherwise = q : walk q ys
             walk _ [] = []
 
@@ -118,19 +121,35 @@ allInfixes bss0 = foldMap (go 1) (NE.nonEmpty $ part 0 $ mkPtrs bss0)
       | otherwise = Nothing
     takePtr i (Ptr _ off bs) = BS.take i $ BS.drop off bs
 
-compress :: ByteString -> [ByteString]
-compress bs0 = go [] [bs0]
-  where
-    wins len occ = (len - 12) * (occ - 1) - 18
+    consecutivePtrs i (x0 :| xs0)
+      = walk (endCheck x0) x0 xs0
+      where
+        startCheck (Ptr _ off _) = if off == 0 then 1 else 0
+        endCheck (Ptr _ off bs) = if off + i == BS.length bs then 1 else 0
+        walk !acc p [] = acc + endCheck p
+        walk !acc p@(Ptr k off _) (p'@(Ptr k' off' _) : xs)
+          | k /= k' = walk (acc + endCheck p + startCheck p') p' xs
+          | off' == off + i = walk (acc + 1) p' xs
+          | otherwise = walk acc p' xs
 
-    go revMap terms = case filter ((> 0) . snd)
-        $ allInfixes terms <&> \(bs, occ) -> (bs, wins (BS.length bs) occ)
+compress :: ByteString -> [ByteString]
+compress bs0 = go 0 [] [bs0]
+  where
+    wins binds len occ edgeOcc
+      | binds < (94 :: Int)
+      = occ * (len - 11) + edgeOcc * 5 - (len + 8)
+      | otherwise
+      = occ * (len - 12) + edgeOcc * 5 - (len + 9)
+
+    go !binds revMap terms = case filter ((> 0) . snd)
+        $ allInfixes terms <&> \(bs, occ, edgeOcc)
+        -> (bs, wins binds (BS.length bs) occ edgeOcc)
       of
         [] -> reverse revMap
         r -> let
             (pat, w) = maximumBy (comparing snd) r
           in trace ("Won " <> show w <> " with " <> show pat)
-            $ go (pat:revMap) $ terms >>=
+            $ go (binds + 1) (pat:revMap) $ terms >>=
               mapMaybe either2Maybe . separateByteString () pat
 
     either2Maybe = either (const Nothing) Just
