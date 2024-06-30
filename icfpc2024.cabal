@@ -135,6 +135,7 @@ library
         , hasql-th
         , http-client-tls
         , http-media
+        , integer-logarithms
         , mtl
         , primitive
         , profunctors
@@ -164,3 +165,4 @@ library
         , ICFPC.LambdaMan.Graph
         , ICFPC.LambdaMan.Greedy
         , ICFPC.Spaceship
+        , ICFPC.Spaceship.Manoeuvre
