@@ -106,10 +106,14 @@ executable spaceship
 executable spaceship-dumb
     import: executables
     main-is: SpaceshipDumb.hs
+    build-depends:
+          bytestring
 
 executable spaceship-greedy
     import: executables
     main-is: SpaceshipGreedy.hs
+    build-depends:
+          bytestring
 
 executable 3d-sim
     import: executables

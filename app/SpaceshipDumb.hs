@@ -1,6 +1,7 @@
+import Data.ByteString qualified as BS
 import ICFPC.Spaceship
 
 main :: IO ()
 main = do
-  input <- getContents
+  input <- BS.getContents
   putStrLn $ formatNumpad <$> dumbSolution (parseInput input)

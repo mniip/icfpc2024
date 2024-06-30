@@ -1,7 +1,9 @@
 module ICFPC.Spaceship where
 
 import Control.Applicative
+import Data.Attoparsec.ByteString.Char8 qualified as Attoparsec
 import Data.Bifunctor
+import Data.ByteString (ByteString)
 import Data.Functor
 import Data.IntMap.Strict (IntMap)
 import Data.IntMap.Strict qualified as IM
@@ -11,36 +13,64 @@ import Data.Ord
 
 import Debug.Trace
 
+newtype Input = Input
+  { points :: [SpaceshipPos]
+  } deriving stock (Eq, Ord, Show)
 
-type X = Int
-type Y = Int
-type VX = Int
-type VY = Int
-type AX = Int
-type AY = Int
-type T = Int
+data SpaceshipPos = SpaceshipPos
+  { x :: !Int
+  , y :: !Int
+  } deriving stock (Eq, Ord, Show)
 
-data Input = Input
-  { points :: [(X, Y)]
+data SpaceshipVel = SpaceshipVel
+  { x :: !Int
+  , y :: !Int
+  } deriving stock (Eq, Ord, Show)
+
+data SpaceshipState = SpaceshipState
+  { pos :: SpaceshipPos
+  , vel :: SpaceshipVel
+  } deriving stock (Eq, Ord, Show)
+
+initState :: SpaceshipState
+initState = SpaceshipState
+  { pos = SpaceshipPos
+    { x = 0
+    , y = 0
+    }
+  , vel = SpaceshipVel
+    { x = 0
+    , y = 0
+    }
   }
 
-parseInput :: String -> Input
-parseInput = Input . map (go . words) . lines
-  where
-    go [x, y] = (read x, read y)
-    go _ = error "urk"
+data SpaceshipCommand = SpaceshipCommand
+  { accelX :: !AX
+  , accelY :: !AY
+  } deriving stock (Eq, Ord, Show)
 
-formatNumpad :: (AX, AY) -> Char
+parseInput :: ByteString -> Input
+parseInput = either error id . Attoparsec.parseOnly do
+  points <- Attoparsec.many' do
+    x <- Attoparsec.signed Attoparsec.decimal
+    Attoparsec.char8 ' '
+    y <- Attoparsec.signed Attoparsec.decimal
+    Attoparsec.char8 '\n'
+    pure SpaceshipPos{x, y}
+  Attoparsec.endOfInput
+  pure Input{..}
+
+formatNumpad :: SpaceshipCommand -> Char
 formatNumpad = \case
-  (-1, -1) -> '1'
-  (0, -1) -> '2'
-  (1, -1) -> '3'
-  (-1, 0) -> '4'
-  (0, 0) -> '5'
-  (1, 0) -> '6'
-  (-1, 1) -> '7'
-  (0, 1) -> '8'
-  (1, 1) -> '9'
+  SpaceshipCommand (-1) (-1) -> '1'
+  SpaceshipCommand 0 (-1) -> '2'
+  SpaceshipCommand 1 (-1) -> '3'
+  SpaceshipCommand (-1) 0 -> '4'
+  SpaceshipCommand 0 0 -> '5'
+  SpaceshipCommand 1 0 -> '6'
+  SpaceshipCommand (-1) 1 -> '7'
+  SpaceshipCommand 0 1 -> '8'
+  SpaceshipCommand 1 1 -> '9'
   p -> error $ "formatNumpad: " <> show p
 
 data Range = Range !Int !Int -- incl
@@ -80,6 +110,14 @@ velByTimeAndPos = posByTimeAndVel <&> go
       ]
       where maxPos = maximum $ IM.elems m <&> \(Range _ rmax) -> rmax
 
+type X = Int
+type Y = Int
+type VX = Int
+type VY = Int
+type AX = Int
+type AY = Int
+type T = Int
+
 backtrack :: T -> (X, VX) -> (X, VX) -> [AX]
 backtrack !t (!x0, !vx0) (!x1, !vx1)
   = go (reverse (take t posByTimeAndVel)) (x1 - x0 - t * vx0) (vx1 - vx0) []
@@ -94,53 +132,53 @@ backtrack !t (!x0, !vx0) (!x1, !vx1)
     go [] 0 0 as = as
     go _ _ _ _ = error "backtrack"
 
-plans :: (X, Y, VX, VY) -> (X, Y) -> [(T, Range, Range)]
-plans (!x0, !y0, !vx0, !vy0) (!x1, !y1) =
-  [ (t, shiftRange vx0 dvxs, shiftRange vy0 dvys)
+plans :: SpaceshipState -> SpaceshipPos -> [(T, Range, Range)]
+plans s tgt =
+  [ (t, shiftRange s.vel.x dvxs, shiftRange s.vel.y dvys)
   | (t, dyn) <- zip [0..] velByTimeAndPos
-  , dvxs <- maybeToList $ IM.lookup (x1 - x0 - t * vx0) dyn
-  , dvys <- maybeToList $ IM.lookup (y1 - y0 - t * vy0) dyn
+  , dvxs <- maybeToList $ IM.lookup (tgt.x - s.pos.x - t * s.vel.x) dyn
+  , dvys <- maybeToList $ IM.lookup (tgt.y - s.pos.y - t * s.vel.y) dyn
   ]
 
-reachGreedily :: (X, Y, VX, VY) -> (X, Y) -> (T, VX, VY)
+reachGreedily :: SpaceshipState -> SpaceshipPos -> (T, SpaceshipVel)
 reachGreedily p q = case plans p q of
-  (t, Range minvx _, Range minvy _) : _ -> (t, minvx, minvy)
+  (t, Range minvx _, Range minvy _) : _ -> (t, SpaceshipVel minvx minvy)
   _ -> error "no plans"
 
 -- visit in order, reach each greedily
-dumbSolution :: Input -> [(AX, AY)]
-dumbSolution input = go (0, 0, 0, 0) input.points
+dumbSolution :: Input -> [SpaceshipCommand]
+dumbSolution input = go initState input.points
   where
-    go (!x0, !y0, !vx0, !vy0) ((!x1, !y1):ps) = let
-        (!t, !vx1, !vy1) = reachGreedily (x0, y0, vx0, vy0) (x1, y1)
-        asx = backtrack t (x0, vx0) (x1, vx1)
-        asy = backtrack t (y0, vy0) (y1, vy1)
-      in zip asx asy ++ go (x1, y1, vx1, vy1) ps
+    go !s (!p:ps) = let
+        (!t, !v) = reachGreedily s p
+        asx = backtrack t (s.pos.x, s.vel.x) (p.x, v.x)
+        asy = backtrack t (s.pos.y, s.vel.y) (p.y, v.y)
+      in zipWith SpaceshipCommand asx asy ++ go (SpaceshipState p v) ps
     go _ [] = []
 
 -- go for closest according to heuristic
-greedySolution :: Input -> [(AX, AY)]
-greedySolution input = pick (0, 0, 0, 0) input.points
+greedySolution :: Input -> [SpaceshipCommand]
+greedySolution input = pick initState input.points
   where
     go _ q _ | trace ("Picked " <> show q) False = undefined
-    go (!x0, !y0, !vx0, !vy0) (!x1, !y1) ps = let
-        (!t, !vx1, !vy1) = reachGreedily (x0, y0, vx0, vy0) (x1, y1)
-        asx = backtrack t (x0, vx0) (x1, vx1)
-        asy = backtrack t (y0, vy0) (y1, vy1)
-      in zip asx asy ++ pick (x1, y1, vx1, vy1) ps
+    go !s !p ps = let
+        (!t, !v) = reachGreedily s p
+        asx = backtrack t (s.pos.x, s.vel.x) (p.x, v.x)
+        asy = backtrack t (s.pos.y, s.vel.y) (p.y, v.y)
+      in zipWith SpaceshipCommand asx asy ++ pick (SpaceshipState p v) ps
 
     pick _ [] = []
     pick st points = let
         p = minimumBy (comparing $ heuristic st) points
       in go st p (delete p points)
 
-    heuristic (!x0, !y0, !vx0, !vy0) (!x1, !y1) = mergeWith max
+    heuristic s p = mergeWith max
       (mergeWith min
-        (timeEstimate x0 vx0 x1 1)
-        (timeEstimate x0 vx0 x1 (-1)))
+        (timeEstimate s.pos.x s.vel.x p.x 1)
+        (timeEstimate s.pos.x s.vel.x p.x (-1)))
       (mergeWith min
-        (timeEstimate y0 vy0 y1 1)
-        (timeEstimate y0 vy0 y1 (-1)))
+        (timeEstimate s.pos.y s.vel.y p.y 1)
+        (timeEstimate s.pos.y s.vel.y p.y (-1)))
 
     mergeWith f (Just x) (Just y) = Just (f x y)
     mergeWith _ p q = p <|> q
