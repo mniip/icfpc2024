@@ -165,4 +165,5 @@ library
         , ICFPC.LambdaMan.Graph
         , ICFPC.LambdaMan.Greedy
         , ICFPC.Spaceship
+        , ICFPC.Spaceship.Greedy
         , ICFPC.Spaceship.Manoeuvre

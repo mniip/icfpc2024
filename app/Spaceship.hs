@@ -5,6 +5,7 @@ import Debug.Trace
 import System.Random
 
 import ICFPC.Spaceship
+import ICFPC.Spaceship.Greedy
 
 intRoot :: Int -> Int
 intRoot 0 = 0
