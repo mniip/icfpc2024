@@ -75,18 +75,9 @@ annealing plannedSteps plannedScore g0 mxs mys = do
       $ 1 - fromIntegral step / fromIntegral plannedSteps :: Double
 
     randomPair = do
-      totWeight <- sum <$> for [0 .. size - 1] do readPrimArray weights
-      iW <- uniformRM (0, totWeight - 1) gen
-      jW <- uniformRM (0, totWeight - 1) gen
-      i <- bucket 0 iW
-      j <- bucket 0 jW
-      case compare i j of
-        LT -> pure (i, j)
-        EQ -> randomPair
-        GT -> pure (j, i)
-      where
-        bucket !i !s = readPrimArray weights i >>= \w -> if s < w then pure i
-          else bucket (i + 1) (s - w)
+      i <- uniformRM (0, size - 2) gen
+      j <- uniformRM (i + 1, size - 1) gen
+      pure (i, j)
 
     loop !step !score = do
       u01 <- uniformDouble01M gen
@@ -153,7 +144,7 @@ keepRestarting steps score !failCount filename input = do
           (primArrayToList xs') (primArrayToList ys')
         }
     else pure input
-  BS.writeFile (filename <> ".ann") $ formatInput input'
+  BS.writeFile (filename <> ".annu") $ formatInput input'
   if
     | ok -> keepRestarting steps score 0 filename input'
     | not ok, failCount > 10 -> keepRestarting steps (score / 2) 0 filename input'
