@@ -171,7 +171,7 @@ haskell = PrettySettings
   , and = \prec (a0 :| args) -> showParen (prec > 3)
     $ a0 4 . appEndo (flip foldMap args \a -> Endo $ showString " && " . a 3)
   , or = \prec (a0 :| args) -> showParen (prec > 2)
-    $ a0 3 . appEndo (flip foldMap args \a -> Endo $ showString " && " . a 2)
+    $ a0 3 . appEndo (flip foldMap args \a -> Endo $ showString " || " . a 2)
   , not = \prec x -> showParen (prec > 10) $ showString "not " . x 11
   }
 
